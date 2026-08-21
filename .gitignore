@@ -1,0 +1,27 @@
+# Build output
+target/
+
+# IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# Logs & temp files
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local databases
+*.db
+*.mv.db
+
+# Environment secrets (keep .env.example committed)
+.env
