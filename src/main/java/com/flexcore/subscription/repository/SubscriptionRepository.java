@@ -62,4 +62,21 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
               and s.endDate < :now
             """)
     int expireOverdue(@Param("now") LocalDateTime now, @Param("newStatus") SubscriptionStatus newStatus);
+
+    /**
+     * Auto-thaws FROZEN subscriptions whose frozen period has fully elapsed.
+     * endDate was already extended by the full freeze duration at freeze time,
+     * so no days are refunded here - only the status flips back to ACTIVE.
+     */
+    @Modifying
+    @Query("""
+            update Subscription s
+            set s.status = com.flexcore.subscription.enums.SubscriptionStatus.ACTIVE,
+                s.frozenAt = null,
+                s.frozenUntil = null,
+                s.lastModifiedDate = :now
+            where s.status = com.flexcore.subscription.enums.SubscriptionStatus.FROZEN
+              and s.frozenUntil <= :now
+            """)
+    int thawElapsedFreezes(@Param("now") LocalDateTime now);
 }

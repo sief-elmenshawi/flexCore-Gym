@@ -11,9 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * Periodically flips overdue ACTIVE subscriptions to EXPIRED so the stored
- * status stays accurate. Services additionally validate endDate lazily at
- * read time, so correctness never depends on this job having run.
+ * Periodically reconciles stored subscription status with the passage of time:
+ * - flips overdue ACTIVE subscriptions to EXPIRED
+ * - auto-thaws FROZEN subscriptions whose freeze period fully elapsed
+ *   (endDate was already extended at freeze time, so no days are refunded)
+ * Services additionally validate endDate lazily at read time, so correctness
+ * never depends on this job having run.
  */
 @Component
 @RequiredArgsConstructor
@@ -22,12 +25,15 @@ public class SubscriptionExpiryScheduler {
 
     private final SubscriptionRepository subscriptionRepository;
 
-    @Scheduled(cron = "0 */30 * * * *")
+    @Scheduled(cron = "${app.jobs.subscription-maintenance-cron:0 */30 * * * *}")
     @Transactional
-    public void expireOverdueSubscriptions() {
-        int expired = subscriptionRepository.expireOverdue(LocalDateTime.now(), SubscriptionStatus.EXPIRED);
-        if (expired > 0) {
-            log.info("Subscription expiry job marked {} overdue subscription(s) as EXPIRED", expired);
+    public void maintainSubscriptionStates() {
+        LocalDateTime now = LocalDateTime.now();
+        int thawed = subscriptionRepository.thawElapsedFreezes(now);
+        int expired = subscriptionRepository.expireOverdue(now, SubscriptionStatus.EXPIRED);
+        if (thawed > 0 || expired > 0) {
+            log.info("Subscription maintenance: {} freeze(s) thawed, {} overdue subscription(s) expired",
+                    thawed, expired);
         }
     }
 }
