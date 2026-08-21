@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -164,5 +165,35 @@ class PaymentServiceTest {
         verify(paymentRepository).save(captor.capture());
         assertEquals(PaymentStatus.FAILED, captor.getValue().getStatus());
         assertNull(captor.getValue().getPaidAt());
+    }
+
+    @Test
+    void getMyPayments_returnsMappedPageForUser() {
+        org.springframework.data.domain.Pageable pageable =
+                org.springframework.data.domain.PageRequest.of(0, 10);
+        Payment payment = Payment.builder()
+                .id(9L)
+                .subscription(subscription)
+                .amount(monthlyPlan.getPrice())
+                .method(PaymentMethod.MOCK_INSTAPAY)
+                .status(PaymentStatus.SUCCESS)
+                .paidAt(LocalDateTime.now())
+                .build();
+        org.springframework.data.domain.Page<Payment> page =
+                new org.springframework.data.domain.PageImpl<>(List.of(payment), pageable, 1);
+        when(paymentRepository.findBySubscriptionUserId(3L, pageable)).thenReturn(page);
+        when(paymentMapper.toResponse(payment)).thenReturn(PaymentResponse.builder()
+                .id(9L)
+                .subscriptionId(7L)
+                .amount(monthlyPlan.getPrice())
+                .method(PaymentMethod.MOCK_INSTAPAY)
+                .status(PaymentStatus.SUCCESS)
+                .build());
+
+        var result = paymentService.getMyPayments(3L, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(9L, result.getContent().get(0).getId());
+        verify(paymentRepository).findBySubscriptionUserId(3L, pageable);
     }
 }

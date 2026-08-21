@@ -1,5 +1,6 @@
 package com.flexcore.payment.controller;
 
+import com.flexcore.core.dto.response.PagedResponse;
 import com.flexcore.core.security.SecurityUtils;
 import com.flexcore.payment.dto.request.InitiatePaymentRequest;
 import com.flexcore.payment.dto.response.PaymentResponse;
@@ -11,8 +12,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,5 +44,17 @@ public class PaymentController {
         boolean privileged = SecurityUtils.hasAuthority("RENEW_SUBSCRIPTION");
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(paymentService.initiate(request, SecurityUtils.getCurrentUserId(), privileged));
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "List my payments (newest first)",
+            description = "Returns the authenticated user's payment history across all their subscriptions. Pages are 1-indexed.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Page of payments")
+    })
+    public ResponseEntity<PagedResponse<PaymentResponse>> my(
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        return PagedResponse.ok(paymentService.getMyPayments(SecurityUtils.getCurrentUserId(), pageable));
     }
 }
