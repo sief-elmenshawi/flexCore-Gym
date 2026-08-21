@@ -1,0 +1,168 @@
+package com.flexcore.payment;
+
+import com.flexcore.core.exception.BusinessRuleViolationException;
+import com.flexcore.payment.dto.request.InitiatePaymentRequest;
+import com.flexcore.payment.dto.response.PaymentResponse;
+import com.flexcore.payment.entity.Payment;
+import com.flexcore.payment.enums.PaymentMethod;
+import com.flexcore.payment.enums.PaymentStatus;
+import com.flexcore.payment.mapper.PaymentMapper;
+import com.flexcore.payment.provider.MockPaymentGateway;
+import com.flexcore.payment.repository.PaymentRepository;
+import com.flexcore.payment.service.impl.PaymentServiceImpl;
+import com.flexcore.subscription.entity.Subscription;
+import com.flexcore.subscription.entity.SubscriptionPlan;
+import com.flexcore.subscription.enums.SubscriptionStatus;
+import com.flexcore.subscription.repository.SubscriptionRepository;
+import com.flexcore.user.entity.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class PaymentServiceTest {
+
+    @Mock private PaymentRepository paymentRepository;
+    @Mock private SubscriptionRepository subscriptionRepository;
+    @Mock private MockPaymentGateway mockPaymentGateway;
+    @Mock private PaymentMapper paymentMapper;
+
+    @InjectMocks
+    private PaymentServiceImpl paymentService;
+
+    private User user;
+    private SubscriptionPlan monthlyPlan;
+    private Subscription subscription;
+
+    @BeforeEach
+    void setUp() {
+        user = User.builder().id(3L).fullName("Ahmed Test").email("ahmed@test.com").active(true).build();
+        monthlyPlan = SubscriptionPlan.builder()
+                .id(10L)
+                .name("Monthly Unlimited")
+                .price(new BigDecimal("1200.00"))
+                .durationInDays(30)
+                .build();
+        subscription = Subscription.builder()
+                .id(7L)
+                .user(user)
+                .plan(monthlyPlan)
+                .status(SubscriptionStatus.EXPIRED)
+                .startDate(LocalDateTime.now().minusDays(60))
+                .endDate(LocalDateTime.now().minusDays(30))
+                .build();
+    }
+
+    private InitiatePaymentRequest request(PaymentMethod method) {
+        InitiatePaymentRequest request = new InitiatePaymentRequest();
+        request.setSubscriptionId(7L);
+        request.setMethod(method);
+        return request;
+    }
+
+    @Test
+    void initiate_whenExpiredSubscriptionPaidSuccessfully_renewsFromNow() {
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LocalDateTime before = LocalDateTime.now().minusSeconds(1);
+        paymentService.initiate(request(PaymentMethod.MOCK_INSTAPAY), 3L, false);
+        LocalDateTime after = LocalDateTime.now().plusSeconds(1);
+
+        assertEquals(SubscriptionStatus.ACTIVE, subscription.getStatus());
+        assertTrue(subscription.getStartDate().isAfter(before));
+        assertTrue(subscription.getEndDate().isAfter(before));
+        assertTrue(subscription.getEndDate().isBefore(after.plusDays(31)));
+        assertEquals(30, java.time.Duration.between(
+                subscription.getStartDate(), subscription.getEndDate()).toDays());
+        verify(subscriptionRepository).save(subscription);
+    }
+
+    @Test
+    void initiate_whenSubscriptionCancelled_throwsWithoutCharging() {
+        subscription.setStatus(SubscriptionStatus.CANCELLED);
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+
+        assertThrows(BusinessRuleViolationException.class,
+                () -> paymentService.initiate(request(PaymentMethod.MOCK_FAWRY), 3L, false));
+
+        verify(mockPaymentGateway, never()).process(any(), any());
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+    @Test
+    void initiate_whenGatewayRejects_paymentFailedAndNoRenewal() {
+        subscription.setStatus(SubscriptionStatus.EXPIRED);
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_VODAFONE_CASH)).thenReturn(false);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        paymentService.initiate(request(PaymentMethod.MOCK_VODAFONE_CASH), 3L, false);
+
+        assertEquals(SubscriptionStatus.EXPIRED, subscription.getStatus());
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void initiate_whenActiveSubscriptionPaid_doesNotRestartWindow() {
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        LocalDateTime originalEnd = LocalDateTime.now().plusDays(12);
+        subscription.setStartDate(LocalDateTime.now().minusDays(18));
+        subscription.setEndDate(originalEnd);
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        paymentService.initiate(request(PaymentMethod.MOCK_INSTAPAY), 3L, false);
+
+        assertEquals(originalEnd.withNano(0), subscription.getEndDate().withNano(0));
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void initiate_onSuccess_persistsSuccessfulPaymentWithPaidAt() {
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        paymentService.initiate(request(PaymentMethod.MOCK_INSTAPAY), 3L, false);
+
+        org.mockito.ArgumentCaptor<Payment> captor = org.mockito.ArgumentCaptor.forClass(Payment.class);
+        verify(paymentRepository).save(captor.capture());
+        assertEquals(PaymentStatus.SUCCESS, captor.getValue().getStatus());
+        assertNotNull(captor.getValue().getPaidAt());
+        assertEquals(monthlyPlan.getPrice(), captor.getValue().getAmount());
+    }
+
+    @Test
+    void initiate_onFailure_persistsFailedPaymentWithoutPaidAt() {
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(false);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        paymentService.initiate(request(PaymentMethod.MOCK_INSTAPAY), 3L, false);
+
+        org.mockito.ArgumentCaptor<Payment> captor = org.mockito.ArgumentCaptor.forClass(Payment.class);
+        verify(paymentRepository).save(captor.capture());
+        assertEquals(PaymentStatus.FAILED, captor.getValue().getStatus());
+        assertNull(captor.getValue().getPaidAt());
+    }
+}

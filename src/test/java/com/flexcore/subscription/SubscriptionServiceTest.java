@@ -111,6 +111,55 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void freeze_whenActiveButEndDateAlreadyPassed_throws() {
+        Subscription overdue = Subscription.builder()
+                .id(7L)
+                .user(user)
+                .plan(monthlyPlan)
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(java.time.LocalDateTime.now().minusDays(60))
+                .endDate(java.time.LocalDateTime.now().minusDays(1))
+                .build();
+
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(overdue));
+
+        var freezeRequest = new com.flexcore.subscription.dto.request.FreezeSubscriptionRequest();
+        freezeRequest.setDays(14);
+
+        assertThrows(BusinessRuleViolationException.class,
+                () -> subscriptionService.freeze(7L, freezeRequest, 1L, false));
+        assertEquals(SubscriptionStatus.ACTIVE, overdue.getStatus());
+    }
+
+    @Test
+    void freeze_whenActiveAndNotEnded_freezesAndExtendsEndDate() {
+        java.time.LocalDateTime originalEnd = java.time.LocalDateTime.now().plusDays(20);
+        Subscription active = Subscription.builder()
+                .id(7L)
+                .user(user)
+                .plan(monthlyPlan)
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(java.time.LocalDateTime.now().minusDays(10))
+                .endDate(originalEnd)
+                .build();
+
+        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(active));
+        when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptionMapper.toResponse(any(Subscription.class)))
+                .thenReturn(SubscriptionResponse.builder().id(7L).status(SubscriptionStatus.FROZEN).build());
+
+        var freezeRequest = new com.flexcore.subscription.dto.request.FreezeSubscriptionRequest();
+        freezeRequest.setDays(14);
+
+        SubscriptionResponse response = subscriptionService.freeze(7L, freezeRequest, 1L, false);
+
+        assertEquals(SubscriptionStatus.FROZEN, active.getStatus());
+        assertNotNull(active.getFrozenUntil());
+        assertEquals(originalEnd.plusDays(14).withNano(0), active.getEndDate().withNano(0));
+        assertEquals(SubscriptionStatus.FROZEN, response.getStatus());
+    }
+
+    @Test
     void cancel_setsStatusToCancelled() {
         Subscription active = Subscription.builder()
                 .id(7L)
