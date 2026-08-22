@@ -46,3 +46,11 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/flexcore_test
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: postgres
+
+      # jacoco.xml is produced by the report goal bound to the test phase (see pom.xml).
+      # Tokenless upload; a failure here never breaks the build.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: target/site/jacoco/jacoco.xml
+          fail_ci_if_error: false
