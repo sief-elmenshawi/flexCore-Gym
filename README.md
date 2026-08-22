@@ -1,6 +1,7 @@
 # FlexCore — Gym Management System
 
 [![CI](https://github.com/sief-elmenshawi/flexCore-Gym/actions/workflows/ci.yml/badge.svg)](https://github.com/sief-elmenshawi/flexCore-Gym/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A solo backend portfolio project (Java 17 / Spring Boot) demonstrating RBAC security,
 concurrency-safe booking, a subscription state machine with freeze support, mock payments,
@@ -77,7 +78,7 @@ Then run `FlexcoreApplication` from your IDE — `application.yml` defaults to
 
 ## Running the Tests
 
-34 of the 35 tests are plain Mockito unit tests — no database needed:
+115 of the 116 tests are plain Mockito unit tests or MockMvc web slices — no database needed:
 
 ```bash
 mvn test
@@ -141,3 +142,7 @@ Feature-complete for the planned scope: auth/RBAC, subscriptions with freeze & f
 plans, class booking with concurrency guarantees, PT sessions, attendance, mock payments
 with renewal logic, reports, bilingual errors, rate limiting, and scheduled maintenance.
 See the project spec (`gym-project-doc.html`) for personas, user stories, and diagrams.
+
+## License
+
+Distributed under the [MIT License](LICENSE).
