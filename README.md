@@ -1,6 +1,7 @@
 # FlexCore — Gym Management System
 
 [![CI](https://github.com/sief-elmenshawi/flexCore-Gym/actions/workflows/ci.yml/badge.svg)](https://github.com/sief-elmenshawi/flexCore-Gym/actions/workflows/ci.yml)
+[![Codecov](https://codecov.io/gh/sief-elmenshawi/flexCore-Gym/graph/badge.svg)](https://codecov.io/gh/sief-elmenshawi/flexCore-Gym)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A solo backend portfolio project (Java 17 / Spring Boot) demonstrating RBAC security,
@@ -103,6 +104,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `main`
 1. Ubuntu runner + JDK 17 (Temurin) with Maven dependency caching
 2. PostgreSQL 16 service container with readiness health checks
 3. Full `mvn -B test` suite; datasource overridden via `SPRING_DATASOURCE_*` env vars
+4. JaCoCo coverage report uploaded to [Codecov](https://codecov.io/gh/sief-elmenshawi/flexCore-Gym)
+   (token stored as the `CODECOV_TOKEN` repository secret)
 
 Dependabot (`.github/dependabot.yml`) opens weekly update PRs for both Maven
 dependencies and workflow action versions; minor/patch updates are grouped into
