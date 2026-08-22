@@ -1,0 +1,22 @@
+# Automated dependency updates:
+# - Maven libraries from pom.xml (Spring Boot, Lombok, jjwt, MapStruct, ...)
+# - GitHub Actions versions used by .github/workflows/ci.yml
+# Minor+patch Maven updates are grouped into one PR to reduce noise;
+# security updates always arrive as individual priority PRs.
+
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
