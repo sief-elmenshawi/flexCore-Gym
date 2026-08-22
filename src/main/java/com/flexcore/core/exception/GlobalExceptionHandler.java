@@ -1,6 +1,7 @@
 package com.flexcore.core.exception;
 
 import com.flexcore.core.dto.response.ErrorResponse;
+import com.flexcore.core.exception.TooManyRequestsException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -73,6 +74,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, message(request, MSG_BAD_CREDENTIALS), request);
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex, HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, message(request, ex.getCode(), ex.getArgs()), request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

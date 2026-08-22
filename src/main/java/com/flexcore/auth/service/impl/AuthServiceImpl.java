@@ -6,6 +6,7 @@ import com.flexcore.auth.dto.response.AuthResponse;
 import com.flexcore.auth.service.AuthService;
 import com.flexcore.core.exception.DuplicateResourceException;
 import com.flexcore.core.security.JwtTokenProvider;
+import com.flexcore.core.security.LoginRateLimiter;
 import com.flexcore.role.entity.Role;
 import com.flexcore.role.repository.RoleRepository;
 import com.flexcore.user.entity.User;
@@ -28,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final LoginRateLimiter loginRateLimiter;
 
     @Override
     @Transactional
@@ -59,19 +61,26 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
+        loginRateLimiter.checkNotBlocked(email);
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
-        if (!user.isActive()) {
-            throw new BadCredentialsException("Account is deactivated");
+            if (!user.isActive()) {
+                throw new BadCredentialsException("Account is deactivated");
+            }
+
+            if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+                throw new BadCredentialsException("Invalid email or password");
+            }
+
+            loginRateLimiter.onSuccess(email);
+            return buildAuthResponse(user);
+        } catch (BadCredentialsException ex) {
+            loginRateLimiter.recordFailure(email);
+            throw ex;
         }
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Invalid email or password");
-        }
-
-        return buildAuthResponse(user);
     }
 
     private AuthResponse buildAuthResponse(User user) {

@@ -45,5 +45,10 @@ app:
   jwt:
     secret: ${JWT_SECRET:change-this-secret-in-production-change-this-secret-in-production}
     access-token-expiration-ms: 900000      # 15 min
+  security:
+    login-rate-limit:
+      max-failed-attempts: 5          # failures allowed per window before blocking
+      failure-window-minutes: 15
+      block-minutes: 5                # how long further logins are rejected
   jobs:
     subscription-maintenance-cron: "0 */30 * * * *"   # thaw elapsed freezes + expire overdue
