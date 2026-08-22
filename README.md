@@ -1,7 +1,6 @@
 # FlexCore — Gym Management System
 
-[![CI](https://github.com/<username>/<repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<username>/<repo>/actions/workflows/ci.yml)
-<!-- TODO: replace <username>/<repo> with your actual GitHub username and repo name -->
+[![CI](https://github.com/sief-elmenshawi/flexCore-Gym/actions/workflows/ci.yml/badge.svg)](https://github.com/sief-elmenshawi/flexCore-Gym/actions/workflows/ci.yml)
 
 A solo backend portfolio project (Java 17 / Spring Boot) demonstrating RBAC security,
 concurrency-safe booking, a subscription state machine with freeze support, mock payments,
