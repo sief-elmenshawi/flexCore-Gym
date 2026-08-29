@@ -50,7 +50,7 @@ jobs:
       # jacoco.xml is produced by the report goal bound to the test phase (see pom.xml).
       # A failure here never breaks the build.
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: target/site/jacoco/jacoco.xml
           fail_ci_if_error: false
