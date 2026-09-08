@@ -22,6 +22,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -83,7 +84,7 @@ class AuthServiceTest {
             saved.setId(7L);
             return saved;
         });
-        when(jwtTokenProvider.generateAccessToken(any(), any(), any())).thenReturn("jwt-token");
+        when(jwtTokenProvider.generateAccessToken(any(), any(), any(), any())).thenReturn("jwt-token");
 
         AuthResponse response = authService.register(registerRequest(" New@Test.COM "));
 
@@ -112,7 +113,7 @@ class AuthServiceTest {
     void login_successClearsFailureCounter() {
         when(userRepository.findByEmail("ahmed@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Passw0rd!", "$2a$hash")).thenReturn(true);
-        when(jwtTokenProvider.generateAccessToken(7L, "ahmed@test.com", "MEMBER")).thenReturn("jwt");
+        when(jwtTokenProvider.generateAccessToken(7L, "ahmed@test.com", "MEMBER", Set.of())).thenReturn("jwt");
 
         AuthResponse response = authService.login(loginRequest(" Ahmed@Test.COM ", "Passw0rd!"));
 
@@ -132,7 +133,7 @@ class AuthServiceTest {
                 () -> authService.login(loginRequest("ahmed@test.com", "bad")));
 
         verify(loginRateLimiter).recordFailure("ahmed@test.com");
-        verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any());
+        verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any());
     }
 
     @Test

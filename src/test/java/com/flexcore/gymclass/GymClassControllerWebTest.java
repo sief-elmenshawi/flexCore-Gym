@@ -13,6 +13,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -45,13 +47,14 @@ class GymClassControllerWebTest extends SecuredControllerSliceTest {
     @Test
     void create_withManageOwnSchedule_returns201() throws Exception {
         when(gymClassService.create(any())).thenReturn(GymClassResponse.builder().id(30L).build());
+        String futureStart = LocalDateTime.now().plusDays(7).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         mockMvc.perform(post("/api/v1/classes").with(asUser(2L, "TRAINER", "MANAGE_OWN_SCHEDULE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Morning Yoga","trainerId":2,"capacity":15,
-                                 "startsAt":"2026-09-01T10:00:00","durationMinutes":60}
-                                """))
+                                 "startsAt":"%s","durationMinutes":60}
+                                """.formatted(futureStart)))
                 .andExpect(status().isCreated());
     }
 

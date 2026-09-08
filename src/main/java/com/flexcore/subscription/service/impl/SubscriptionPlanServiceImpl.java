@@ -10,6 +10,8 @@ import com.flexcore.subscription.mapper.SubscriptionMapper;
 import com.flexcore.subscription.repository.SubscriptionPlanRepository;
 import com.flexcore.subscription.service.SubscriptionPlanService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "plans", allEntries = true)
     public SubscriptionPlanResponse create(CreateSubscriptionPlanRequest request) {
         SubscriptionPlan plan = SubscriptionPlan.builder()
                 .name(request.getName().trim())
@@ -37,6 +40,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "plans", allEntries = true)
     public SubscriptionPlanResponse update(Long id, UpdateSubscriptionPlanRequest request) {
         SubscriptionPlan plan = planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("error.subscription-plan.notfound", id));
@@ -51,6 +55,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "plans", key = "'all'", sync = true)
     public List<SubscriptionPlanResponse> getAll() {
         return planRepository.findAll().stream()
                 .map(subscriptionMapper::toPlanResponse)

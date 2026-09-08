@@ -13,6 +13,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -35,10 +37,11 @@ class PTSessionControllerWebTest extends SecuredControllerSliceTest {
     void book_returns201AndUsesCurrentUserId() throws Exception {
         when(ptSessionService.book(any(), eq(7L)))
                 .thenReturn(PTSessionResponse.builder().id(50L).build());
+        String futureAt = LocalDateTime.now().plusDays(3).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         mockMvc.perform(post("/api/v1/pt-sessions").with(asUser(7L, "MEMBER", "BOOK_CLASS"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"trainerId\":2,\"scheduledAt\":\"2026-09-01T18:00:00\",\"durationMinutes\":60}"))
+                        .content("{\"trainerId\":2,\"scheduledAt\":\"" + futureAt + "\",\"durationMinutes\":60}"))
                 .andExpect(status().isCreated());
 
         verify(ptSessionService).book(any(), eq(7L));

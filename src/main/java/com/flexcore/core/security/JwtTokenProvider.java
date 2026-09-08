@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Component
 public class JwtTokenProvider {
@@ -23,7 +25,7 @@ public class JwtTokenProvider {
         this.accessTokenExpirationMs = accessTokenExpirationMs;
     }
 
-    public String generateAccessToken(Long userId, String email, String roleName) {
+    public String generateAccessToken(Long userId, String email, String roleName, Set<String> permissions) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpirationMs);
 
@@ -31,6 +33,7 @@ public class JwtTokenProvider {
                 .subject(String.valueOf(userId))
                 .claim("email", email)
                 .claim("role", roleName)
+                .claim("permissions", permissions)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey, Jwts.SIG.HS256)
@@ -43,6 +46,24 @@ public class JwtTokenProvider {
 
     public String getRoleFromToken(String token) {
         return parseClaims(token).get("role", String.class);
+    }
+
+    /**
+     * Permission codes embedded in the token at login time, so the request filter
+     * never needs a database round-trip to materialise authorities.
+     */
+    public Set<String> getPermissionsFromToken(String token) {
+        Object raw = parseClaims(token).get("permissions");
+        if (!(raw instanceof Iterable<?> values)) {
+            return Set.of();
+        }
+        Set<String> permissions = new HashSet<>();
+        for (Object value : values) {
+            if (value instanceof String code) {
+                permissions.add(code);
+            }
+        }
+        return Set.copyOf(permissions);
     }
 
     public boolean isTokenValid(String token) {

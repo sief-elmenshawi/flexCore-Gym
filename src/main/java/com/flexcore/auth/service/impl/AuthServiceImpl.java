@@ -18,6 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -84,7 +87,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String token = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail(), user.getRole().getName());
+        Set<String> permissions = permissionsOf(user.getRole());
+        String token = jwtTokenProvider.generateAccessToken(
+                user.getId(), user.getEmail(), user.getRole().getName(), permissions);
         return AuthResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
@@ -92,5 +97,14 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .roleName(user.getRole().getName())
                 .build();
+    }
+
+    private Set<String> permissionsOf(Role role) {
+        if (role == null || role.getPermissions() == null) {
+            return Set.of();
+        }
+        return role.getPermissions().stream()
+                .map(permission -> permission.getCode())
+                .collect(Collectors.toSet());
     }
 }

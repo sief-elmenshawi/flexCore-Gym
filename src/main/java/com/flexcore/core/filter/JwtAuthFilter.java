@@ -2,8 +2,6 @@ package com.flexcore.core.filter;
 
 import com.flexcore.core.security.CustomUserPrincipal;
 import com.flexcore.core.security.JwtTokenProvider;
-import com.flexcore.role.entity.Role;
-import com.flexcore.role.repository.RoleRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +27,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RoleRepository roleRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -45,13 +42,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Long userId = jwtTokenProvider.getUserIdFromToken(token);
                 String roleName = jwtTokenProvider.getRoleFromToken(token);
 
-                roleRepository.findByNameWithPermissions(roleName).ifPresent(role -> {
-                    Set<SimpleGrantedAuthority> authorities = extractAuthorities(role);
-                    CustomUserPrincipal principal = new CustomUserPrincipal(userId, null, roleName);
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(principal, null, authorities);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                });
+                Set<SimpleGrantedAuthority> authorities = jwtTokenProvider.getPermissionsFromToken(token).stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toSet());
+                CustomUserPrincipal principal = new CustomUserPrincipal(userId, null, roleName);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(principal, null, authorities);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception ex) {
                 log.error("Could not set user authentication in security context", ex);
                 SecurityContextHolder.clearContext();
@@ -59,12 +56,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private Set<SimpleGrantedAuthority> extractAuthorities(Role role) {
-        return role.getPermissions().stream()
-                .map(permission -> new SimpleGrantedAuthority(permission.getCode()))
-                .collect(Collectors.toSet());
     }
 
     private String resolveToken(HttpServletRequest request) {

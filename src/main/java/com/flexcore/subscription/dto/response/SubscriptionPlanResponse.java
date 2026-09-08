@@ -1,13 +1,17 @@
 package com.flexcore.subscription.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Subscription plan details")
 public class SubscriptionPlanResponse {
 
