@@ -6,5 +6,8 @@ public enum OutboxStatus {
     PENDING,
 
     /** Delivered successfully to a handler. */
-    PUBLISHED
+    PUBLISHED,
+
+    /** Gave up: exceeded {@code app.jobs.outbox-max-attempts}. Needs manual inspection. */
+    DEAD
 }

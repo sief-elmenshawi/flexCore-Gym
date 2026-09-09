@@ -20,3 +20,7 @@ app:
     # Integration tests drive the outbox publisher manually; keep the real scheduler out.
     outbox-poll-enabled: false
     outbox-poll-delay-ms: 60000
+  rabbit:
+    # Default off in tests so the in-app logging handler takes over and no listener
+    # container tries to reach a broker. The Rabbit integration test flips it on.
+    enabled: false

@@ -63,17 +63,28 @@ public class OutboxEvent {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    /** Earliest time the worker may retry this event; null means "retry now". */
+    @Column(name = "next_attempt_at")
+    private LocalDateTime nextAttemptAt;
+
     public void markPublished() {
         this.status = OutboxStatus.PUBLISHED;
         this.publishedAt = LocalDateTime.now();
+        this.nextAttemptAt = null;
     }
 
-    public void recordFailure(Exception ex) {
+    public void markDead() {
+        this.status = OutboxStatus.DEAD;
+        this.nextAttemptAt = null;
+    }
+
+    public void recordFailure(Exception ex, LocalDateTime nextAttemptAt) {
         this.attempts++;
         String message = ex.getMessage();
         if (message != null && message.length() > MAX_ERROR_LENGTH) {
             message = message.substring(0, MAX_ERROR_LENGTH);
         }
         this.lastError = message;
+        this.nextAttemptAt = nextAttemptAt;
     }
 }

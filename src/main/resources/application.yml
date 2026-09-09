@@ -58,6 +58,29 @@ spring:
         one-indexed-parameters: true
         max-page-size: 100
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    # Guaranteed delivery: wait for the broker's confirm before the outbox row is
+    # marked PUBLISHED, and receive unroutable messages back (mandatory) instead of
+    # silently dropping them.
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        # Rejected messages go to the dead-letter exchange instead of bouncing forever.
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+        # Consume a handful of messages per listener and allow the container to scale
+        # up under backlog instead of one sequential consumer with a 250-message prefetch.
+        concurrency: ${RABBIT_LISTENER_CONCURRENCY:2}
+        max-concurrency: ${RABBIT_LISTENER_MAX_CONCURRENCY:5}
+        prefetch: ${RABBIT_LISTENER_PREFETCH:10}
+
   cache:
     type: redis
     redis:
@@ -90,3 +113,15 @@ app:
     subscription-maintenance-cron: "0 */30 * * * *"   # thaw elapsed freezes + expire overdue
     outbox-poll-enabled: true                         # false disables the outbox worker outright
     outbox-poll-delay-ms: 5000                        # outbox worker polls every 5s
+    outbox-batch-size: 100                            # max events claimed per poll
+    outbox-max-attempts: 10                           # delivery attempts before dead-lettering
+    outbox-backoff-base-seconds: 5                    # first retry waits 5s, then 10/20/40...
+    outbox-backoff-cap-seconds: 3600                  # retries never spaced more than 1h apart
+  rabbit:
+    enabled: ${APP_RABBIT_ENABLED:true}               # false falls back to the in-app logging handler
+    exchange: ${OUTBOX_RABBIT_EXCHANGE:flexcore.events}
+    routing-key: ${OUTBOX_RABBIT_ROUTING_KEY:booking.confirmed}
+    notification-queue: ${OUTBOX_RABBIT_NOTIFICATION_QUEUE:flexcore.notification.queue}
+    dead-letter-exchange: flexcore.events.dlx
+    dead-letter-routing-key: notification.dead
+    dead-letter-queue: flexcore.notification.dead.queue
