@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -16,17 +18,26 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test proving Redis caching behaves correctly end-to-end:
- *  - read path is cached (the list is present in Redis after the first read)
+ *  - read path is cached (the list is present in the Redis-backed {@code plans} cache
+ *    under the configured key {@code flexcore:plans::all} after the first read)
  *  - invalidation works (updating a plan evicts the stale cached list)
  * Requires a reachable test database AND a reachable Redis on localhost:6379
  * (start with:  docker run -d --name flexcore-redis -p 6379:6379 redis:7-alpine).
+ * <p>
+ * All cache interactions go through the application's own {@link CacheManager} (the same
+ * {@code RedisCache}/{@code RedisCacheWriter} the service uses), so the clear, the reads
+ * and the service's writes share one coherent connection pathway instead of racing raw
+ * {@link StringRedisTemplate} commands against the cache writer across pooled connections.
  */
 @SpringBootTest
 @ActiveProfiles("test")
 class SubscriptionPlanCachingIntegrationTest {
+
+    private static final String CONFIGURED_CACHE_KEY = "flexcore:plans::all";
 
     @Autowired
     private SubscriptionPlanService planService;
@@ -35,29 +46,38 @@ class SubscriptionPlanCachingIntegrationTest {
     private SubscriptionPlanRepository planRepository;
 
     @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
     private StringRedisTemplate redisTemplate;
 
     @BeforeEach
     void clearCacheAndData() throws InterruptedException {
         planRepository.deleteAll();
-        redisTemplate.delete("flexcore:plans::all");
-        // The DELETE above is dispatched over a pooled connection; LLn the same pool the
-        // test body's subsequent SET (put) can land before the DELETE is visible. Wait for
-        // the key to be confirmed gone so no stale delete can wipe a later put.
+        plans().clear();
+        // The cache writer dispatches commands over as many connections as the pool has;
+        // wait for the eviction to be visible before the test re-populates, so a slow
+        // eviction can never wipe the value put by the test body.
         awaitCachedState(false);
     }
 
+    private Cache plans() {
+        return cacheManager.getCache("plans");
+    }
+
     private boolean isCached() {
-        return Boolean.TRUE.equals(redisTemplate.hasKey("flexcore:plans::all"));
+        Cache.ValueWrapper cached = plans().get("all");
+        return cached != null && cached.get() != null;
     }
 
     /**
-     * Lettuce dispatches cache commands over a small connection pool, so two consecutive
-     * operations (e.g. clear() then put()) can race across different connections. Poll the
-     * Redis state with a short deadline instead of asserting immediately.
+     * Poll the cached state instead of asserting immediately: the Redis-backed cache
+     * writes through the Lettuce pool, so the observable store lags the calling thread
+     * by however long the current round-trip takes. Await it with a deadline so a slow
+     * moment on a loaded runner cannot turn into a race.
      */
     private void awaitCachedState(boolean expected) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + 15_000;
+        long deadline = System.currentTimeMillis() + 20_000;
         while (System.currentTimeMillis() < deadline) {
             if (isCached() == expected) {
                 return;
@@ -65,7 +85,7 @@ class SubscriptionPlanCachingIntegrationTest {
             Thread.sleep(100);
         }
         throw new AssertionError("Redis cache state did not reach expected=" + expected
-                + " within 15s (last observed=" + isCached() + ")");
+                + " within 20s (last observed=" + isCached() + ")");
     }
 
     @Test
@@ -76,6 +96,9 @@ class SubscriptionPlanCachingIntegrationTest {
         assertEquals(1, result.size());
 
         awaitCachedState(true);
+
+        assertTrue(Boolean.TRUE.equals(redisTemplate.hasKey(CONFIGURED_CACHE_KEY)),
+                "The plans list must be stored in Redis under the configured cache key");
 
         List<SubscriptionPlanResponse> second = planService.getAll();
         assertEquals("Basic", second.get(0).getName(), "Second read returns the cached values");
@@ -96,7 +119,7 @@ class SubscriptionPlanCachingIntegrationTest {
         update.setMaxFamilyMembers(0);
         planService.update(created.getId(), update);
 
-        // Lettuce can dispatch the eviction over a different pooled connection; wait for it.
+        // The eviction may land over a different pooled connection than the put; wait for it.
         awaitCachedState(false);
 
         List<SubscriptionPlanResponse> refreshed = planService.getAll();
