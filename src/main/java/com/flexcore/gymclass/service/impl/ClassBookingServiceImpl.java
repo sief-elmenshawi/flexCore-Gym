@@ -6,10 +6,12 @@ import com.flexcore.gymclass.dto.response.ClassBookingResponse;
 import com.flexcore.gymclass.entity.ClassBooking;
 import com.flexcore.gymclass.entity.GymClass;
 import com.flexcore.gymclass.enums.BookingStatus;
+import com.flexcore.gymclass.event.BookingConfirmedEvent;
 import com.flexcore.gymclass.mapper.GymClassMapper;
 import com.flexcore.gymclass.repository.ClassBookingRepository;
 import com.flexcore.gymclass.repository.GymClassRepository;
 import com.flexcore.gymclass.service.ClassBookingService;
+import com.flexcore.outbox.OutboxEventRecorder;
 import com.flexcore.subscription.repository.SubscriptionRepository;
 import com.flexcore.user.entity.User;
 import com.flexcore.user.repository.UserRepository;
@@ -32,6 +34,7 @@ public class ClassBookingServiceImpl implements ClassBookingService {
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final GymClassMapper gymClassMapper;
+    private final OutboxEventRecorder outboxEventRecorder;
 
     @Transactional
     public ClassBookingResponse book(Long classId, Long memberId) {
@@ -69,7 +72,22 @@ public class ClassBookingServiceImpl implements ClassBookingService {
             throw new BusinessRuleViolationException("error.booking.race-lost");
         }
 
-        return gymClassMapper.toBookingResponse(classBookingRepository.save(booking));
+        ClassBooking saved = classBookingRepository.save(booking);
+
+        // Same transaction as the booking commit (MANDATORY propagation): the event
+        // is never lost if the booking commits, and never sent if it rolls back.
+        outboxEventRecorder.recordEvent(
+                BookingConfirmedEvent.TYPE,
+                "class_booking",
+                saved.getId(),
+                new BookingConfirmedEvent(
+                        saved.getId(),
+                        member.getId(),
+                        gymClass.getId(),
+                        gymClass.getName(),
+                        booking.getBookedAt()));
+
+        return gymClassMapper.toBookingResponse(saved);
     }
 
     @Transactional

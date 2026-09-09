@@ -2,8 +2,10 @@ package com.flexcore.gymclass;
 
 import com.flexcore.core.exception.BusinessRuleViolationException;
 import com.flexcore.gymclass.entity.GymClass;
+import com.flexcore.gymclass.event.BookingConfirmedEvent;
 import com.flexcore.gymclass.repository.GymClassRepository;
 import com.flexcore.gymclass.service.ClassBookingService;
+import com.flexcore.outbox.repository.OutboxEventRepository;
 import com.flexcore.role.entity.Role;
 import com.flexcore.role.repository.RoleRepository;
 import com.flexcore.subscription.entity.Subscription;
@@ -62,6 +64,9 @@ class BookingConcurrencyTest {
 
     @Autowired
     private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
 
     @Test
     void concurrentBookings_onSingleSeat_onlyOneSucceeds() throws Exception {
@@ -146,6 +151,8 @@ class BookingConcurrencyTest {
             });
             subscriptionPlanRepository.findByName("Rush Plan")
                     .forEach(subscriptionPlanRepository::delete);
+            // bookings made through the service also write outbox events
+            outboxEventRepository.deleteByEventType(BookingConfirmedEvent.TYPE);
         });
     }
 }

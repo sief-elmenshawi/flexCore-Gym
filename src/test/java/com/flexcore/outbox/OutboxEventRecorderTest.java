@@ -1,0 +1,57 @@
+package com.flexcore.outbox;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.flexcore.gymclass.event.BookingConfirmedEvent;
+import com.flexcore.outbox.entity.OutboxEvent;
+import com.flexcore.outbox.enums.OutboxStatus;
+import com.flexcore.outbox.repository.OutboxEventRepository;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+class OutboxEventRecorderTest {
+
+    private final OutboxEventRepository repository = mock(OutboxEventRepository.class);
+    private final ObjectMapper mapper = new ObjectMapper()
+            .findAndRegisterModules()
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final OutboxEventRecorder recorder = new OutboxEventRecorder(repository, mapper);
+
+    @Test
+    void persistsPendingEventWithSerializedPayload() throws Exception {
+        var payload = new BookingConfirmedEvent(11L, 22L, 33L, "HIIT", LocalDateTime.of(2026, 1, 5, 10, 30));
+
+        recorder.recordEvent(BookingConfirmedEvent.TYPE, "class_booking", 11L, payload);
+
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(repository).save(captor.capture());
+        OutboxEvent saved = captor.getValue();
+        assertEquals(OutboxStatus.PENDING, saved.getStatus());
+        assertEquals(BookingConfirmedEvent.TYPE, saved.getEventType());
+        assertEquals("class_booking", saved.getAggregateType());
+        assertEquals(11L, saved.getAggregateId());
+
+        JsonNode node = mapper.readTree(saved.getPayload());
+        assertEquals(11L, node.get("bookingId").asLong());
+        assertEquals(22L, node.get("memberId").asLong());
+        assertEquals("HIIT", node.get("className").asText());
+        assertEquals("2026-01-05T10:30:00", node.get("bookedAt").asText());
+    }
+
+    @Test
+    void unwrapsSerializationErrors() {
+        OutboxEventRecorder strict = new OutboxEventRecorder(repository, new ObjectMapper());
+        var payload = new BookingConfirmedEvent(1L, 2L, 3L, "HIIT", LocalDateTime.now());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> strict.recordEvent(BookingConfirmedEvent.TYPE, "class_booking", 1L, payload));
+    }
+}

@@ -82,8 +82,11 @@ app:
     access-token-expiration-ms: 900000      # 15 min
   security:
     login-rate-limit:
+      store: ${LOGIN_RATE_LIMIT_STORE:redis}   # 'redis' (distributed, default) or 'in-memory' (single-node fallback)
       max-failed-attempts: 5          # failures allowed per window before blocking
       failure-window-minutes: 15
       block-minutes: 5                # how long further logins are rejected
   jobs:
     subscription-maintenance-cron: "0 */30 * * * *"   # thaw elapsed freezes + expire overdue
+    outbox-poll-enabled: true                         # false disables the outbox worker outright
+    outbox-poll-delay-ms: 5000                        # outbox worker polls every 5s

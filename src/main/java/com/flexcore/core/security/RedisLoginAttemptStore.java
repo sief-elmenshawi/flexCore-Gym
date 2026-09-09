@@ -2,6 +2,7 @@ package com.flexcore.core.security;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -19,8 +20,12 @@ import java.util.List;
  * costs exactly one round-trip — no WATCH/MULTI/EXEC sessions, no retries. The script is a mirror
  * of {@link AttemptState#next}; keep the two in lock-step. The TTL garbage-collects stale keys
  * automatically, so no scheduled sweep is needed in distributed deployments.
+ * <p>
+ * This is the default backend ({@code app.security.login-rate-limit.store=redis}, or unset) —
+ * required for any deployment with more than one app instance, since state must be shared.
  */
 @Component
+@ConditionalOnProperty(name = "app.security.login-rate-limit.store", havingValue = "redis", matchIfMissing = true)
 public class RedisLoginAttemptStore implements LoginAttemptStore {
 
     private static final String KEY_PREFIX = "flexcore:login-ratelimit:";

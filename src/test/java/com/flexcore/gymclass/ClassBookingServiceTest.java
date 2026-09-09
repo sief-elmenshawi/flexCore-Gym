@@ -5,10 +5,12 @@ import com.flexcore.gymclass.dto.response.ClassBookingResponse;
 import com.flexcore.gymclass.entity.ClassBooking;
 import com.flexcore.gymclass.entity.GymClass;
 import com.flexcore.gymclass.enums.BookingStatus;
+import com.flexcore.gymclass.event.BookingConfirmedEvent;
 import com.flexcore.gymclass.mapper.GymClassMapper;
 import com.flexcore.gymclass.repository.ClassBookingRepository;
 import com.flexcore.gymclass.repository.GymClassRepository;
 import com.flexcore.gymclass.service.impl.ClassBookingServiceImpl;
+import com.flexcore.outbox.OutboxEventRecorder;
 import com.flexcore.subscription.entity.Subscription;
 import com.flexcore.subscription.repository.SubscriptionRepository;
 import com.flexcore.user.entity.User;
@@ -30,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +51,7 @@ class ClassBookingServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private SubscriptionRepository subscriptionRepository;
     @Mock private GymClassMapper gymClassMapper;
+    @Mock private OutboxEventRecorder outboxEventRecorder;
 
     @InjectMocks
     private ClassBookingServiceImpl classBookingService;
@@ -84,6 +88,8 @@ class ClassBookingServiceTest {
 
         assertEquals(1, gymClass.getBookedCount());
         verify(classBookingRepository).save(any(ClassBooking.class));
+        verify(outboxEventRecorder).recordEvent(
+                eq(BookingConfirmedEvent.TYPE), eq("class_booking"), any(), any());
     }
 
     @Test

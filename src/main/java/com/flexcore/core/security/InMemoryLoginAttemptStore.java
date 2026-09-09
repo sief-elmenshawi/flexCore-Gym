@@ -1,5 +1,8 @@
 package com.flexcore.core.security;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -7,7 +10,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * In-memory {@link LoginAttemptStore} backed by a {@link ConcurrentHashMap}.
  * Keeps the original local-only semantics and is what the deterministic unit tests
  * exercise without needing a running Redis.
+ * <p>
+ * Registered only when {@code app.security.login-rate-limit.store=in-memory} — a single-node
+ * fallback for local development or environments without Redis. State does not survive a
+ * restart and is not shared across instances; use {@link RedisLoginAttemptStore} (the default)
+ * for any multi-instance deployment.
  */
+@Component
+@ConditionalOnProperty(name = "app.security.login-rate-limit.store", havingValue = "in-memory")
 public final class InMemoryLoginAttemptStore implements LoginAttemptStore {
 
     private final ConcurrentHashMap<String, AttemptState> attempts = new ConcurrentHashMap<>();
