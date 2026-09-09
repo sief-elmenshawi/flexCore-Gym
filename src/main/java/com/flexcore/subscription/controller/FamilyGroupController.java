@@ -5,6 +5,7 @@ import com.flexcore.subscription.dto.request.AddFamilyMemberRequest;
 import com.flexcore.subscription.dto.request.CreateFamilyGroupRequest;
 import com.flexcore.subscription.dto.response.FamilyGroupResponse;
 import com.flexcore.subscription.service.FamilyGroupService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -33,6 +34,7 @@ public class FamilyGroupController {
     private final FamilyGroupService familyGroupService;
 
     @PostMapping
+    @Observed(name = "http.createFamilyGroup", contextualName = "POST /api/v1/family-groups")
     @Operation(summary = "Create a family group for the current user and activate the owner's subscription")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Family group created"),
@@ -45,6 +47,7 @@ public class FamilyGroupController {
     }
 
     @PostMapping("/{id}/members")
+    @Observed(name = "http.addFamilyMember", contextualName = "POST /api/v1/family-groups/{id}/members")
     @Operation(summary = "Add a member to a family group (owner only)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Member added with an active subscription"),

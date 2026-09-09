@@ -1,0 +1,4 @@
+management:
+  tracing:
+    sampling:
+      probability: 0.1          # 10% sampling in production to keep overhead low

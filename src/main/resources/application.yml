@@ -68,8 +68,11 @@ spring:
     # silently dropping them.
     publisher-confirm-type: correlated
     publisher-returns: true
+    template:
+      observation-enabled: true
     listener:
       simple:
+        observation-enabled: true
         # Rejected messages go to the dead-letter exchange instead of bouncing forever.
         default-requeue-rejected: false
         retry:
@@ -90,10 +93,33 @@ spring:
       cache-null-values: false
 
 management:
+  observations:
+    annotations:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    metrics:
+      export:
+        enabled: false
+        url: http://localhost:14318/v1/metrics
+  opentelemetry:
+    resource-attributes:
+      service.name: flexcore
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:14318/v1/traces
+    logging:
+      export:
+        otlp:
+          enabled: false          # Jaeger doesn't ingest OTLP logs; keep traceId in console
+          endpoint: http://localhost:14318/v1/logs
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
 
 springdoc:
   swagger-ui:

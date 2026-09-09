@@ -6,6 +6,7 @@ import com.flexcore.user.dto.request.UpdateProfileRequest;
 import com.flexcore.user.dto.request.UpdateUserRequest;
 import com.flexcore.user.dto.response.UserResponse;
 import com.flexcore.user.service.UserService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -42,6 +43,7 @@ public class UserController {
     }
 
     @PutMapping("/me")
+    @Observed(name = "http.updateProfile", contextualName = "PUT /api/v1/users/me")
     @Operation(summary = "Update the current authenticated user's profile")
     public ResponseEntity<UserResponse> updateMe(@Valid @RequestBody UpdateProfileRequest request) {
         return ResponseEntity.ok(userService.updateProfile(SecurityUtils.getCurrentUserId(), request));
@@ -49,6 +51,7 @@ public class UserController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('MANAGE_STAFF')")
+    @Observed(name = "http.createUser", contextualName = "POST /api/v1/users")
     @Operation(summary = "Create a user (staff or member)", description = "Requires MANAGE_STAFF permission")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User created"),
@@ -76,6 +79,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('MANAGE_STAFF')")
+    @Observed(name = "http.updateUser", contextualName = "PUT /api/v1/users/{id}")
     @Operation(summary = "Update a user's basic info", description = "Requires MANAGE_STAFF permission")
     public ResponseEntity<UserResponse> update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.update(id, request));
@@ -83,6 +87,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('MANAGE_STAFF')")
+    @Observed(name = "http.deactivateUser", contextualName = "DELETE /api/v1/users/{id}")
     @Operation(summary = "Deactivate a user account (soft delete)", description = "Requires MANAGE_STAFF permission")
     @ApiResponse(responseCode = "204", description = "User deactivated")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {

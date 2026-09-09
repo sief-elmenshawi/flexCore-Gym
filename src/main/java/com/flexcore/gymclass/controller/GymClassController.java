@@ -5,6 +5,7 @@ import com.flexcore.gymclass.dto.request.CreateGymClassRequest;
 import com.flexcore.gymclass.dto.request.UpdateGymClassRequest;
 import com.flexcore.gymclass.dto.response.GymClassResponse;
 import com.flexcore.gymclass.service.GymClassService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -40,6 +41,7 @@ public class GymClassController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('MANAGE_OWN_SCHEDULE')")
+    @Observed(name = "http.createClass", contextualName = "POST /api/v1/classes")
     @Operation(summary = "Schedule a new class", description = "Requires MANAGE_OWN_SCHEDULE permission")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Class scheduled"),
@@ -52,6 +54,7 @@ public class GymClassController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('MANAGE_OWN_SCHEDULE')")
+    @Observed(name = "http.updateClass", contextualName = "PUT /api/v1/classes/{id}")
     @Operation(summary = "Update a class", description = "Requires MANAGE_OWN_SCHEDULE permission")
     public ResponseEntity<GymClassResponse> update(@PathVariable Long id,
                                                    @Valid @RequestBody UpdateGymClassRequest request) {
@@ -67,6 +70,7 @@ public class GymClassController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('MANAGE_OWN_SCHEDULE')")
+    @Observed(name = "http.deleteClass", contextualName = "DELETE /api/v1/classes/{id}")
     @Operation(summary = "Delete a class with no bookings", description = "Requires MANAGE_OWN_SCHEDULE permission")
     @ApiResponse(responseCode = "204", description = "Class deleted")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

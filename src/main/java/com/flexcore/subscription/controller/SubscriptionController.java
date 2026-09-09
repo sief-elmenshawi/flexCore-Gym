@@ -6,6 +6,7 @@ import com.flexcore.subscription.dto.request.FreezeSubscriptionRequest;
 import com.flexcore.subscription.dto.request.PurchaseSubscriptionRequest;
 import com.flexcore.subscription.dto.response.SubscriptionResponse;
 import com.flexcore.subscription.service.SubscriptionService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -40,6 +41,7 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
 
     @PostMapping("/purchase")
+    @Observed(name = "http.purchaseSubscription", contextualName = "POST /api/v1/subscriptions/purchase")
     @Operation(summary = "Purchase a subscription",
             description = "Members buy for themselves. Staff with RENEW_SUBSCRIPTION may pass userId to buy for others.")
     @ApiResponses({
@@ -55,6 +57,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/{id}/freeze")
+    @Observed(name = "http.freezeSubscription", contextualName = "POST /api/v1/subscriptions/{id}/freeze")
     @Operation(summary = "Freeze a subscription for a number of days (extends the end date)")
     public ResponseEntity<SubscriptionResponse> freeze(@PathVariable Long id,
                                                        @Valid @RequestBody FreezeSubscriptionRequest request) {
@@ -64,6 +67,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/{id}/unfreeze")
+    @Observed(name = "http.unfreezeSubscription", contextualName = "POST /api/v1/subscriptions/{id}/unfreeze")
     @Operation(summary = "Unfreeze a frozen subscription")
     public ResponseEntity<SubscriptionResponse> unfreeze(@PathVariable Long id) {
         boolean privileged = SecurityUtils.hasAuthority("RENEW_SUBSCRIPTION")
@@ -72,6 +76,7 @@ public class SubscriptionController {
     }
 
     @DeleteMapping("/{id}")
+    @Observed(name = "http.cancelSubscription", contextualName = "DELETE /api/v1/subscriptions/{id}")
     @Operation(summary = "Cancel a subscription")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Subscription cancelled"),

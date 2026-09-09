@@ -5,6 +5,7 @@ import com.flexcore.outbox.entity.OutboxEvent;
 import com.flexcore.outbox.enums.OutboxStatus;
 import com.flexcore.outbox.enums.PublishOutcome;
 import com.flexcore.outbox.repository.OutboxEventRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -47,6 +48,7 @@ public class OutboxEventProcessor {
         this.backoffCapSeconds = backoffCapSeconds;
     }
 
+    @Observed(name = "outbox.publish", contextualName = "Outbox Event Publish")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PublishOutcome publish(Long eventId) {
         OutboxEvent event = repository.findByIdForPublishing(eventId).orElse(null);
@@ -61,7 +63,7 @@ public class OutboxEventProcessor {
         }
         try {
             Object payload = objectMapper.readValue(event.getPayload(), handler.payloadType());
-            dispatch(handler, payload);
+            dispatch(handler, payload, event.getTraceContext());
             event.markPublished();
             return PublishOutcome.PUBLISHED;
         } catch (Exception ex) {
@@ -85,7 +87,7 @@ public class OutboxEventProcessor {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private void dispatch(OutboxEventHandler handler, Object payload) {
-        handler.handle(payload);
+    private void dispatch(OutboxEventHandler handler, Object payload, String traceContext) {
+        handler.handle(payload, traceContext);
     }
 }

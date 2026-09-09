@@ -17,6 +17,7 @@ import com.flexcore.subscription.service.SubscriptionService;
 import com.flexcore.subscription.specification.SubscriptionSpecifications;
 import com.flexcore.user.entity.User;
 import com.flexcore.user.repository.UserRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionMapper subscriptionMapper;
 
     @Override
+    @Observed(name = "subscription.purchase", contextualName = "Purchase Subscription")
     @Transactional
     public SubscriptionResponse purchase(PurchaseSubscriptionRequest request, Long currentUserId, boolean privileged) {
         Long targetUserId = privileged && request.getUserId() != null ? request.getUserId() : currentUserId;
@@ -73,6 +75,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Observed(name = "subscription.freeze", contextualName = "Freeze Subscription")
     @Transactional
     public SubscriptionResponse freeze(Long id, FreezeSubscriptionRequest request,
                                        Long currentUserId, boolean privileged) {
@@ -95,6 +98,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Observed(name = "subscription.unfreeze", contextualName = "Unfreeze Subscription")
     @Transactional
     public SubscriptionResponse unfreeze(Long id, Long currentUserId, boolean privileged) {
         Subscription subscription = getOwnedSubscription(id, currentUserId, privileged);
@@ -118,6 +122,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Observed(name = "subscription.cancel", contextualName = "Cancel Subscription")
     @Transactional
     public SubscriptionResponse cancel(Long id, Long currentUserId, boolean privileged) {
         Subscription subscription = getOwnedSubscription(id, currentUserId, privileged);

@@ -6,6 +6,7 @@ import com.flexcore.gymclass.dto.request.BookClassRequest;
 import com.flexcore.gymclass.dto.response.ClassBookingResponse;
 import com.flexcore.gymclass.service.ClassBookingService;
 import com.flexcore.gymclass.service.impl.ClassBookingServiceImpl;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -37,6 +38,7 @@ public class ClassBookingController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('BOOK_CLASS')")
+    @Observed(name = "http.book", contextualName = "POST /api/v1/bookings")
     @Operation(summary = "Book a seat in a class", description = "Requires BOOK_CLASS permission")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Seat booked"),
@@ -56,6 +58,7 @@ public class ClassBookingController {
     }
 
     @DeleteMapping("/{id}")
+    @Observed(name = "http.cancelBooking", contextualName = "DELETE /api/v1/bookings/{id}")
     @Operation(summary = "Cancel a booking and free the seat")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Booking cancelled"),

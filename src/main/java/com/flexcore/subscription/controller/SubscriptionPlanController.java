@@ -4,6 +4,7 @@ import com.flexcore.subscription.dto.request.CreateSubscriptionPlanRequest;
 import com.flexcore.subscription.dto.request.UpdateSubscriptionPlanRequest;
 import com.flexcore.subscription.dto.response.SubscriptionPlanResponse;
 import com.flexcore.subscription.service.SubscriptionPlanService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -34,6 +35,7 @@ public class SubscriptionPlanController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('MANAGE_SUBSCRIPTIONS')")
+    @Observed(name = "http.createPlan", contextualName = "POST /api/v1/plans")
     @Operation(summary = "Create a subscription plan", description = "Requires MANAGE_SUBSCRIPTIONS permission")
     @ApiResponse(responseCode = "201", description = "Plan created")
     public ResponseEntity<SubscriptionPlanResponse> create(@Valid @RequestBody CreateSubscriptionPlanRequest request) {
@@ -42,6 +44,7 @@ public class SubscriptionPlanController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('MANAGE_SUBSCRIPTIONS')")
+    @Observed(name = "http.updatePlan", contextualName = "PUT /api/v1/plans/{id}")
     @Operation(summary = "Update a subscription plan", description = "Requires MANAGE_SUBSCRIPTIONS permission")
     public ResponseEntity<SubscriptionPlanResponse> update(@PathVariable Long id,
                                                            @Valid @RequestBody UpdateSubscriptionPlanRequest request) {

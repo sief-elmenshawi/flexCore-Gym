@@ -60,6 +60,10 @@ public class OutboxEvent {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** W3C traceparent captured from the recording thread, re-injected on publish. */
+    @Column(name = "trace_context", length = 255)
+    private String traceContext;
+
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 

@@ -5,6 +5,7 @@ import com.flexcore.core.security.SecurityUtils;
 import com.flexcore.ptsession.dto.request.BookPTSessionRequest;
 import com.flexcore.ptsession.dto.response.PTSessionResponse;
 import com.flexcore.ptsession.service.PTSessionService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -34,6 +35,7 @@ public class PTSessionController {
     private final PTSessionService ptSessionService;
 
     @PostMapping
+    @Observed(name = "http.bookPTSession", contextualName = "POST /api/v1/pt-sessions")
     @Operation(summary = "Book a personal training session with a trainer",
             description = "Validates the trainer has no overlapping scheduled session.")
     @ApiResponses({
@@ -56,6 +58,7 @@ public class PTSessionController {
     }
 
     @DeleteMapping("/{id}")
+    @Observed(name = "http.cancelPTSession", contextualName = "DELETE /api/v1/pt-sessions/{id}")
     @Operation(summary = "Cancel a scheduled session (participants only)")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Session cancelled"),

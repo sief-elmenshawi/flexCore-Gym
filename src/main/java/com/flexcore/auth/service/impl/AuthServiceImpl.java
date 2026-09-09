@@ -11,6 +11,7 @@ import com.flexcore.role.entity.Role;
 import com.flexcore.role.repository.RoleRepository;
 import com.flexcore.user.entity.User;
 import com.flexcore.user.repository.UserRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -35,6 +36,7 @@ public class AuthServiceImpl implements AuthService {
     private final LoginRateLimiter loginRateLimiter;
 
     @Override
+    @Observed(name = "auth.register", contextualName = "User Registration")
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
@@ -61,6 +63,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Observed(name = "auth.login", contextualName = "User Login")
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();

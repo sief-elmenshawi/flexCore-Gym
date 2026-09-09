@@ -4,6 +4,7 @@ import com.flexcore.auth.dto.request.LoginRequest;
 import com.flexcore.auth.dto.request.RegisterRequest;
 import com.flexcore.auth.dto.response.AuthResponse;
 import com.flexcore.auth.service.AuthService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -28,6 +29,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @SecurityRequirements
+    @Observed(name = "http.register", contextualName = "POST /api/v1/auth/register")
     @Operation(summary = "Register a new member account")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Account created and access token returned"),
@@ -39,6 +41,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @SecurityRequirements
+    @Observed(name = "http.login", contextualName = "POST /api/v1/auth/login")
     @Operation(summary = "Authenticate and receive a JWT access token")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Authenticated successfully"),

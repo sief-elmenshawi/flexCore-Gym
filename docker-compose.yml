@@ -29,6 +29,16 @@ services:
       timeout: 5s
       retries: 10
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.74.0
+    container_name: flexcore-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "14318:4318"   # OTLP HTTP (host 4318 is blocked by Windows port exclusion)
+      - "16686:16686"  # Jaeger UI
+
   app:
     build: .
     container_name: flexcore-app
@@ -38,6 +48,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      jaeger:
+        condition: service_started
     ports:
       - "8080:8080"
     environment:
@@ -47,6 +59,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: flexcore
 
 volumes:
   flexcore_pg_data:

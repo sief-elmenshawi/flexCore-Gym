@@ -13,6 +13,7 @@ import com.flexcore.payment.service.PaymentService;
 import com.flexcore.subscription.entity.Subscription;
 import com.flexcore.subscription.enums.SubscriptionStatus;
 import com.flexcore.subscription.repository.SubscriptionRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper paymentMapper;
 
     @Override
+    @Observed(name = "payment.initiate", contextualName = "Initiate Payment")
     @Transactional
     public PaymentResponse initiate(InitiatePaymentRequest request, Long currentUserId, boolean privileged) {
         Subscription subscription = subscriptionRepository.findById(request.getSubscriptionId())

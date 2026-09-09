@@ -15,6 +15,16 @@ spring:
       host: localhost
       port: 6379
 
+management:
+  opentelemetry:
+    enabled: false
+  tracing:
+    enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
+
 app:
   jobs:
     # Integration tests drive the outbox publisher manually; keep the real scheduler out.

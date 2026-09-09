@@ -5,6 +5,7 @@ import com.flexcore.core.security.SecurityUtils;
 import com.flexcore.payment.dto.request.InitiatePaymentRequest;
 import com.flexcore.payment.dto.response.PaymentResponse;
 import com.flexcore.payment.service.PaymentService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -33,6 +34,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping("/initiate")
+    @Observed(name = "http.initiatePayment", contextualName = "POST /api/v1/payments/initiate")
     @Operation(summary = "Initiate a payment for a subscription (mock gateway, ~90% success)",
             description = "Members pay for their own subscriptions. Staff with RENEW_SUBSCRIPTION may pay on behalf of others.")
     @ApiResponses({

@@ -7,6 +7,7 @@ import com.flexcore.role.dto.response.RoleResponse;
 import com.flexcore.role.entity.Permission;
 import com.flexcore.role.repository.PermissionRepository;
 import com.flexcore.role.service.RoleService;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -38,6 +39,7 @@ public class RoleController {
     private final PermissionRepository permissionRepository;
 
     @PostMapping
+    @Observed(name = "http.createRole", contextualName = "POST /api/v1/roles")
     @Operation(summary = "Create a role with permissions")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Role created"),
@@ -49,6 +51,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
+    @Observed(name = "http.updateRole", contextualName = "PUT /api/v1/roles/{id}")
     @Operation(summary = "Update a role's name and permissions")
     public ResponseEntity<RoleResponse> update(@PathVariable Long id, @Valid @RequestBody UpdateRoleRequest request) {
         return ResponseEntity.ok(roleService.update(id, request));
@@ -68,6 +71,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
+    @Observed(name = "http.deleteRole", contextualName = "DELETE /api/v1/roles/{id}")
     @Operation(summary = "Delete a role")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Role deleted"),

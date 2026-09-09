@@ -5,6 +5,7 @@ import com.flexcore.attendance.dto.response.AttendanceResponse;
 import com.flexcore.attendance.service.AttendanceService;
 import com.flexcore.core.dto.response.PagedResponse;
 import com.flexcore.core.security.SecurityUtils;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -35,6 +36,7 @@ public class AttendanceController {
 
     @PostMapping("/check-in")
     @PreAuthorize("hasAuthority('CHECK_IN_MEMBER')")
+    @Observed(name = "http.checkIn", contextualName = "POST /api/v1/attendance/check-in")
     @Operation(summary = "Check a member in at the front desk",
             description = "Requires CHECK_IN_MEMBER permission. The member must have an active subscription.")
     @ApiResponses({

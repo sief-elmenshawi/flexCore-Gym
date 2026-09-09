@@ -15,6 +15,7 @@ import com.flexcore.outbox.OutboxEventRecorder;
 import com.flexcore.subscription.repository.SubscriptionRepository;
 import com.flexcore.user.entity.User;
 import com.flexcore.user.repository.UserRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +37,7 @@ public class ClassBookingServiceImpl implements ClassBookingService {
     private final GymClassMapper gymClassMapper;
     private final OutboxEventRecorder outboxEventRecorder;
 
+    @Observed(name = "booking.confirm", contextualName = "Confirm Class Booking")
     @Transactional
     public ClassBookingResponse book(Long classId, Long memberId) {
         User member = findUser(memberId);
@@ -90,6 +92,7 @@ public class ClassBookingServiceImpl implements ClassBookingService {
         return gymClassMapper.toBookingResponse(saved);
     }
 
+    @Observed(name = "booking.cancel", contextualName = "Cancel Class Booking")
     @Transactional
     public void cancelBooking(Long bookingId, Long requestingUserId) {
         ClassBooking booking = classBookingRepository.findById(bookingId)
