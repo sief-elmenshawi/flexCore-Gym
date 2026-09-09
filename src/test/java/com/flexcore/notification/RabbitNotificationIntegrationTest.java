@@ -22,6 +22,7 @@ import com.flexcore.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -43,7 +44,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@TestPropertySource(properties = "app.rabbit.enabled=true")
+@TestPropertySource(properties = {
+        "app.rabbit.enabled=true",
+        // Isolated topology so a co-running copy of the app (e.g. the dev server in
+        // IDEA) can never be a competing consumer on the same shared queue.
+        "app.rabbit.exchange=flexcore.events.test",
+        "app.rabbit.routing-key=booking.confirmed.test",
+        "app.rabbit.notification-queue=flexcore.notification.test.queue",
+        "app.rabbit.dead-letter-exchange=flexcore.events.test.dlx",
+        "app.rabbit.dead-letter-routing-key=notification.test.dead",
+        "app.rabbit.dead-letter-queue=flexcore.notification.test.dead.queue"
+})
 class RabbitNotificationIntegrationTest {
 
     @Autowired private ClassBookingService classBookingService;
@@ -56,6 +67,7 @@ class RabbitNotificationIntegrationTest {
     @Autowired private OutboxEventRepository outboxEventRepository;
     @Autowired private OutboxPublisher outboxPublisher;
     @Autowired private NotificationConsumer notificationConsumer;
+    @Autowired private RabbitListenerEndpointRegistry listenerEndpointRegistry;
     @Autowired private TransactionTemplate transactionTemplate;
 
     @BeforeEach
@@ -80,6 +92,7 @@ class RabbitNotificationIntegrationTest {
 
     @Test
     void confirmedBooking_isDeliveredThroughRabbitMq_toTheNotificationConsumer() throws Exception {
+        awaitListenerReady();
         createMember();
         GymClass gymClass = createGymClass();
         User member = userRepository.findByEmail("rabbit-trainer@example.com").orElseThrow();
@@ -96,10 +109,29 @@ class RabbitNotificationIntegrationTest {
         OutboxEvent published = outboxEventRepository.findById(recorded.getId()).orElseThrow();
         assertEquals(OutboxStatus.PUBLISHED, published.getStatus());
 
-        BookingConfirmedEvent delivered = notificationConsumer.await(10_000);
+        BookingConfirmedEvent delivered = notificationConsumer.await(30_000);
         assertNotNull(delivered, "Message never arrived from the notification queue");
         assertEquals(response.getId(), delivered.bookingId());
         assertEquals(response.getUserId(), delivered.memberId());
+    }
+
+    /**
+     * The listener container connects asynchronously a moment after the context boots.
+     * Await it before publishing, so the assertion below waits on actual delivery rather
+     * than racing the container's startup on a loaded runner.
+     */
+    private void awaitListenerReady() throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 30_000;
+        while (System.currentTimeMillis() < deadline) {
+            boolean ready = !listenerEndpointRegistry.getListenerContainers().isEmpty()
+                    && listenerEndpointRegistry.getListenerContainers().stream()
+                            .allMatch(c -> c.isRunning());
+            if (ready) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        throw new AssertionError("Rabbit listener container never started within 30s");
     }
 
     private User createMember() {

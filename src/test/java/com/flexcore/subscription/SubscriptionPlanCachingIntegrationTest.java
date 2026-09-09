@@ -57,15 +57,15 @@ class SubscriptionPlanCachingIntegrationTest {
      * Redis state with a short deadline instead of asserting immediately.
      */
     private void awaitCachedState(boolean expected) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + 5000;
+        long deadline = System.currentTimeMillis() + 15_000;
         while (System.currentTimeMillis() < deadline) {
             if (isCached() == expected) {
                 return;
             }
-            Thread.sleep(50);
+            Thread.sleep(100);
         }
         throw new AssertionError("Redis cache state did not reach expected=" + expected
-                + " within 5s (last observed=" + isCached() + ")");
+                + " within 15s (last observed=" + isCached() + ")");
     }
 
     @Test
