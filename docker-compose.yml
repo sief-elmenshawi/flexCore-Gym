@@ -39,6 +39,19 @@ services:
       - "14318:4318"   # OTLP HTTP (host 4318 is blocked by Windows port exclusion)
       - "16686:16686"  # Jaeger UI
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: flexcore-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   app:
     build: .
     container_name: flexcore-app
@@ -47,6 +60,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       jaeger:
         condition: service_started
@@ -58,6 +73,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME: flexcore
