@@ -7,6 +7,7 @@ import com.flexcore.gymclass.dto.request.UpdateGymClassRequest;
 import com.flexcore.gymclass.dto.response.GymClassResponse;
 import com.flexcore.gymclass.entity.GymClass;
 import com.flexcore.gymclass.mapper.GymClassMapper;
+import com.flexcore.gymclass.repository.ClassBookingRepository;
 import com.flexcore.gymclass.repository.GymClassRepository;
 import com.flexcore.gymclass.service.GymClassService;
 import com.flexcore.gymclass.specification.GymClassSpecifications;
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
 public class GymClassServiceImpl implements GymClassService {
 
     private final GymClassRepository gymClassRepository;
+    private final ClassBookingRepository classBookingRepository;
     private final UserRepository userRepository;
     private final GymClassMapper gymClassMapper;
 
@@ -78,6 +80,9 @@ public class GymClassServiceImpl implements GymClassService {
         if (gymClass.getBookedCount() > 0) {
             throw new BusinessRuleViolationException("error.gym-class.delete-has-bookings");
         }
+        // Cancelled bookings leave rows behind (bookedCount only tracks CONFIRMED ones);
+        // remove them so the FK on class_bookings does not block the class deletion.
+        classBookingRepository.deleteByGymClass_Id(id);
         gymClassRepository.delete(gymClass);
     }
 

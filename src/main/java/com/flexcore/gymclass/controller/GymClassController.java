@@ -9,6 +9,7 @@ import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,7 @@ public class GymClassController {
     }
 
     @GetMapping("/{id}")
+    @SecurityRequirements
     @Operation(summary = "Get class details by id")
     @ApiResponse(responseCode = "404", description = "Class not found")
     public ResponseEntity<GymClassResponse> getById(@PathVariable Long id) {
@@ -79,6 +81,7 @@ public class GymClassController {
     }
 
     @GetMapping("/upcoming")
+    @SecurityRequirements
     @Operation(summary = "Search classes with filters and pagination",
             description = "Public endpoint. Filter by name, trainer, or date range. Pages are 1-indexed.")
     public ResponseEntity<PagedResponse<GymClassResponse>> search(
