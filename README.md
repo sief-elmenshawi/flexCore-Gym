@@ -175,7 +175,6 @@ Feature-complete for the planned scope: auth/RBAC, subscriptions with freeze & f
 plans, class booking with concurrency guarantees, event-driven delivery via outbox +
 RabbitMQ, distributed tracing, PT sessions, attendance, mock payments with renewal
 logic, reports, bilingual errors, rate limiting, CORS, and scheduled maintenance.
-See the project spec (`gym-project-doc.html`) for personas, user stories, and diagrams.
 
 ## License
 
