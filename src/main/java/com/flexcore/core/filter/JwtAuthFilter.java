@@ -2,6 +2,7 @@ package com.flexcore.core.filter;
 
 import com.flexcore.core.security.CustomUserPrincipal;
 import com.flexcore.core.security.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,14 +36,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (token != null && jwtTokenProvider.isTokenValid(token)
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             try {
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                String roleName = jwtTokenProvider.getRoleFromToken(token);
+                Claims claims = jwtTokenProvider.parseClaims(token);
+                Long userId = Long.valueOf(claims.getSubject());
+                String roleName = claims.get("role", String.class);
 
-                Set<SimpleGrantedAuthority> authorities = jwtTokenProvider.getPermissionsFromToken(token).stream()
+                Set<SimpleGrantedAuthority> authorities = jwtTokenProvider.extractPermissions(claims).stream()
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toSet());
                 CustomUserPrincipal principal = new CustomUserPrincipal(userId, null, roleName);

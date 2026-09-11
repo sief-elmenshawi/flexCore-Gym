@@ -1,7 +1,6 @@
 package com.flexcore.core.security;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,20 +39,13 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public Long getUserIdFromToken(String token) {
-        return Long.valueOf(parseClaims(token).getSubject());
-    }
-
-    public String getRoleFromToken(String token) {
-        return parseClaims(token).get("role", String.class);
-    }
-
     /**
-     * Permission codes embedded in the token at login time, so the request filter
-     * never needs a database round-trip to materialise authorities.
+     * Permission codes read from already-parsed claims. Lets callers parse the
+     * token once per request and reuse the result for every claim lookup instead
+     * of re-running signature verification per field.
      */
-    public Set<String> getPermissionsFromToken(String token) {
-        Object raw = parseClaims(token).get("permissions");
+    public Set<String> extractPermissions(Claims claims) {
+        Object raw = claims.get("permissions");
         if (!(raw instanceof Iterable<?> values)) {
             return Set.of();
         }
@@ -66,16 +58,8 @@ public class JwtTokenProvider {
         return Set.copyOf(permissions);
     }
 
-    public boolean isTokenValid(String token) {
-        try {
-            parseClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException ex) {
-            return false;
-        }
-    }
-
-    private Claims parseClaims(String token) {
+    /** Parses and signature-verifies the token exactly once, returning its claims. */
+    public Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
                 .build()
