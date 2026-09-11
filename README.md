@@ -176,6 +176,9 @@ plans, class booking with concurrency guarantees, event-driven delivery via outb
 RabbitMQ, distributed tracing, PT sessions, attendance, mock payments with renewal
 logic, reports, bilingual errors, rate limiting, CORS, and scheduled maintenance.
 
+> For a full architecture map, per-module test coverage, performance changes, known
+> trade-offs and the proposed backlog, see [docs/PROJECT_ANALYSIS_PLAN.md](docs/PROJECT_ANALYSIS_PLAN.md).
+
 ## License
 
 Distributed under the [MIT License](LICENSE).
