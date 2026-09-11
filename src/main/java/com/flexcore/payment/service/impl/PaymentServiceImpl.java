@@ -5,10 +5,14 @@ import com.flexcore.core.exception.ResourceNotFoundException;
 import com.flexcore.payment.dto.request.InitiatePaymentRequest;
 import com.flexcore.payment.dto.response.PaymentResponse;
 import com.flexcore.payment.entity.Payment;
+import com.flexcore.payment.entity.PaymentIdempotency;
 import com.flexcore.payment.enums.PaymentStatus;
 import com.flexcore.payment.mapper.PaymentMapper;
 import com.flexcore.payment.provider.MockPaymentGateway;
+import com.flexcore.payment.repository.PaymentIdempotencyRepository;
 import com.flexcore.payment.repository.PaymentRepository;
+import com.flexcore.payment.service.PaymentIdempotencyWaiter;
+import com.flexcore.payment.service.PaymentInProgressException;
 import com.flexcore.payment.service.PaymentService;
 import com.flexcore.subscription.entity.Subscription;
 import com.flexcore.subscription.enums.SubscriptionStatus;
@@ -30,6 +34,8 @@ import java.time.LocalDateTime;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final PaymentIdempotencyRepository idempotencyRepository;
+    private final PaymentIdempotencyWaiter idempotencyWaiter;
     private final SubscriptionRepository subscriptionRepository;
     private final MockPaymentGateway mockPaymentGateway;
     private final PaymentMapper paymentMapper;
@@ -37,7 +43,41 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Observed(name = "payment.initiate", contextualName = "Initiate Payment")
     @Transactional
-    public PaymentResponse initiate(InitiatePaymentRequest request, Long currentUserId, boolean privileged) {
+    public PaymentResponse initiate(InitiatePaymentRequest request, String idempotencyKey, Long currentUserId, boolean privileged) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            return initiateIdempotent(request, idempotencyKey.trim(), currentUserId, privileged);
+        }
+        return paymentMapper.toResponse(doInitiate(request, currentUserId, privileged));
+    }
+
+    private PaymentResponse initiateIdempotent(InitiatePaymentRequest request, String idempotencyKey,
+                                               Long currentUserId, boolean privileged) {
+        java.util.Optional<PaymentIdempotency> existing =
+                idempotencyRepository.findByUserIdAndIdempotencyKey(currentUserId, idempotencyKey);
+
+        if (existing.isPresent() && existing.get().getPayment() != null) {
+            log.debug("Idempotent replay for key={} user={}", idempotencyKey, currentUserId);
+            return paymentMapper.toResponse(existing.get().getPayment());
+        }
+
+        int claimed = idempotencyRepository.claim(currentUserId, idempotencyKey);
+        if (claimed == 0) {
+            try {
+                Payment resolved = idempotencyWaiter.awaitLinkedPayment(currentUserId, idempotencyKey);
+                log.debug("Idempotent wait resolved for key={}", idempotencyKey);
+                return paymentMapper.toResponse(resolved);
+            } catch (PaymentInProgressException ex) {
+                throw new BusinessRuleViolationException("error.payment.in-progress");
+            }
+        }
+
+        Payment payment = doInitiate(request, currentUserId, privileged);
+        idempotencyRepository.linkPayment(currentUserId, idempotencyKey, payment);
+
+        return paymentMapper.toResponse(payment);
+    }
+
+    private Payment doInitiate(InitiatePaymentRequest request, Long currentUserId, boolean privileged) {
         Subscription subscription = subscriptionRepository.findById(request.getSubscriptionId())
                 .orElseThrow(() -> new ResourceNotFoundException("error.subscription.notfound", request.getSubscriptionId()));
 
@@ -63,7 +103,6 @@ public class PaymentServiceImpl implements PaymentService {
                 approved ? "succeeded" : "failed");
 
         if (approved && subscription.getStatus() == SubscriptionStatus.EXPIRED) {
-            // Successful renewal: restart the subscription window from now.
             LocalDateTime now = LocalDateTime.now();
             subscription.setStatus(SubscriptionStatus.ACTIVE);
             subscription.setStartDate(now);
@@ -71,7 +110,7 @@ public class PaymentServiceImpl implements PaymentService {
             subscriptionRepository.save(subscription);
         }
 
-        return paymentMapper.toResponse(payment);
+        return payment;
     }
 
     @Override

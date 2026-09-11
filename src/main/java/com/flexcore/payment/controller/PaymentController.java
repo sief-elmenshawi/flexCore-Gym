@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,10 +43,12 @@ public class PaymentController {
             @ApiResponse(responseCode = "403", description = "Not your subscription"),
             @ApiResponse(responseCode = "404", description = "Subscription not found")
     })
-    public ResponseEntity<PaymentResponse> initiate(@Valid @RequestBody InitiatePaymentRequest request) {
+    public ResponseEntity<PaymentResponse> initiate(
+            @Valid @RequestBody InitiatePaymentRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         boolean privileged = SecurityUtils.hasAuthority("RENEW_SUBSCRIPTION");
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(paymentService.initiate(request, SecurityUtils.getCurrentUserId(), privileged));
+                .body(paymentService.initiate(request, idempotencyKey, SecurityUtils.getCurrentUserId(), privileged));
     }
 
     @GetMapping("/my")

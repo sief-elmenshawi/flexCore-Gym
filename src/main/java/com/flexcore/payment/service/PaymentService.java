@@ -7,7 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface PaymentService {
 
-    PaymentResponse initiate(InitiatePaymentRequest request, Long currentUserId, boolean privileged);
+    PaymentResponse initiate(InitiatePaymentRequest request, String idempotencyKey, Long currentUserId, boolean privileged);
 
     Page<PaymentResponse> getMyPayments(Long userId, Pageable pageable);
 }

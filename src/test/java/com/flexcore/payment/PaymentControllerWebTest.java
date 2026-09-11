@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,7 +33,7 @@ class PaymentControllerWebTest extends SecuredControllerSliceTest {
 
     @Test
     void initiate_asMemberWithoutRenewPermission_passesPrivilegedFalse() throws Exception {
-        when(paymentService.initiate(any(), eq(7L), eq(false)))
+        when(paymentService.initiate(any(), isNull(), eq(7L), eq(false)))
                 .thenReturn(PaymentResponse.builder().build());
 
         mockMvc.perform(post("/api/v1/payments/initiate").with(asUser(7L, "MEMBER", "BOOK_CLASS"))
@@ -40,12 +41,26 @@ class PaymentControllerWebTest extends SecuredControllerSliceTest {
                         .content("{\"subscriptionId\":5,\"method\":\"MOCK_FAWRY\"}"))
                 .andExpect(status().isCreated());
 
-        verify(paymentService).initiate(any(), eq(7L), eq(false));
+        verify(paymentService).initiate(any(), isNull(), eq(7L), eq(false));
+    }
+
+    @Test
+    void initiate_withIdempotencyKey_passesItThrough() throws Exception {
+        when(paymentService.initiate(any(), eq("dup-key-123"), eq(7L), eq(false)))
+                .thenReturn(PaymentResponse.builder().build());
+
+        mockMvc.perform(post("/api/v1/payments/initiate").with(asUser(7L, "MEMBER", "BOOK_CLASS"))
+                        .header("Idempotency-Key", "dup-key-123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"subscriptionId\":5,\"method\":\"MOCK_FAWRY\"}"))
+                .andExpect(status().isCreated());
+
+        verify(paymentService).initiate(any(), eq("dup-key-123"), eq(7L), eq(false));
     }
 
     @Test
     void initiate_asStaffWithRenewPermission_passesPrivilegedTrue() throws Exception {
-        when(paymentService.initiate(any(), eq(9L), eq(true)))
+        when(paymentService.initiate(any(), isNull(), eq(9L), eq(true)))
                 .thenReturn(PaymentResponse.builder().build());
 
         mockMvc.perform(post("/api/v1/payments/initiate").with(asUser(9L, "ADMIN", "RENEW_SUBSCRIPTION"))
@@ -53,7 +68,7 @@ class PaymentControllerWebTest extends SecuredControllerSliceTest {
                         .content("{\"subscriptionId\":5,\"method\":\"MOCK_INSTAPAY\"}"))
                 .andExpect(status().isCreated());
 
-        verify(paymentService).initiate(any(), eq(9L), eq(true));
+        verify(paymentService).initiate(any(), isNull(), eq(9L), eq(true));
     }
 
     @Test
