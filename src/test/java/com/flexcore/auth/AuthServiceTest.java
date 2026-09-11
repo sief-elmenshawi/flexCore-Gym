@@ -1,10 +1,13 @@
 package com.flexcore.auth;
 
 import com.flexcore.auth.dto.request.LoginRequest;
+import com.flexcore.auth.dto.request.RefreshTokenRequest;
 import com.flexcore.auth.dto.request.RegisterRequest;
 import com.flexcore.auth.dto.response.AuthResponse;
+import com.flexcore.auth.service.RefreshTokenService;
 import com.flexcore.auth.service.impl.AuthServiceImpl;
 import com.flexcore.core.exception.DuplicateResourceException;
+import com.flexcore.core.exception.InvalidRefreshTokenException;
 import com.flexcore.core.security.JwtTokenProvider;
 import com.flexcore.core.security.LoginRateLimiter;
 import com.flexcore.role.entity.Role;
@@ -40,6 +43,7 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private LoginRateLimiter loginRateLimiter;
+    @Mock private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -85,10 +89,12 @@ class AuthServiceTest {
             return saved;
         });
         when(jwtTokenProvider.generateAccessToken(any(), any(), any(), any())).thenReturn("jwt-token");
+        when(refreshTokenService.issue(any())).thenAnswer(inv -> new RefreshTokenService.TokenPair("refresh-raw", User.builder().id(inv.getArgument(0, Long.class)).build()));
 
         AuthResponse response = authService.register(registerRequest(" New@Test.COM "));
 
         assertEquals("jwt-token", response.getAccessToken());
+        assertEquals("refresh-raw", response.getRefreshToken());
         verify(loginRateLimiter, never()).recordFailure(any());
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -114,10 +120,12 @@ class AuthServiceTest {
         when(userRepository.findByEmail("ahmed@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Passw0rd!", "$2a$hash")).thenReturn(true);
         when(jwtTokenProvider.generateAccessToken(7L, "ahmed@test.com", "MEMBER", Set.of())).thenReturn("jwt");
+        when(refreshTokenService.issue(any())).thenAnswer(inv -> new RefreshTokenService.TokenPair("refresh-raw", User.builder().id(inv.getArgument(0, Long.class)).build()));
 
         AuthResponse response = authService.login(loginRequest(" Ahmed@Test.COM ", "Passw0rd!"));
 
         assertEquals("jwt", response.getAccessToken());
+        assertEquals("refresh-raw", response.getRefreshToken());
         assertEquals(7L, response.getUserId());
         verify(loginRateLimiter).checkNotBlocked("ahmed@test.com");
         verify(loginRateLimiter).onSuccess("ahmed@test.com");
@@ -156,5 +164,37 @@ class AuthServiceTest {
 
         verify(passwordEncoder, never()).matches(any(), any());
         verify(loginRateLimiter).recordFailure("ahmed@test.com");
+    }
+
+    @Test
+    void refresh_rotatesTokenAndReturnsNewTokens() {
+        RefreshTokenService.TokenPair rotated = new RefreshTokenService.TokenPair("new-raw-refresh", user);
+        when(refreshTokenService.rotate("old-refresh")).thenReturn(rotated);
+        when(jwtTokenProvider.generateAccessToken(7L, "ahmed@test.com", "MEMBER", Set.of())).thenReturn("new-access");
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("old-refresh");
+        AuthResponse response = authService.refresh(request);
+
+        assertEquals("new-access", response.getAccessToken());
+        assertEquals("new-raw-refresh", response.getRefreshToken());
+        assertEquals(7L, response.getUserId());
+        verify(refreshTokenService).rotate("old-refresh");
+    }
+
+    @Test
+    void refresh_invalidTokenThrowsInvalidRefreshTokenException() {
+        when(refreshTokenService.rotate("bad")).thenThrow(new InvalidRefreshTokenException());
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("bad");
+
+        assertThrows(InvalidRefreshTokenException.class, () -> authService.refresh(request));
+    }
+
+    @Test
+    void logout_delegatesToRefreshTokenService() {
+        authService.logout("some-token");
+        verify(refreshTokenService).revoke("some-token");
     }
 }

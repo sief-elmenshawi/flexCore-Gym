@@ -1,10 +1,13 @@
 package com.flexcore.auth.service.impl;
 
 import com.flexcore.auth.dto.request.LoginRequest;
+import com.flexcore.auth.dto.request.RefreshTokenRequest;
 import com.flexcore.auth.dto.request.RegisterRequest;
 import com.flexcore.auth.dto.response.AuthResponse;
 import com.flexcore.auth.service.AuthService;
+import com.flexcore.auth.service.RefreshTokenService;
 import com.flexcore.core.exception.DuplicateResourceException;
+import com.flexcore.core.exception.InvalidRefreshTokenException;
 import com.flexcore.core.security.JwtTokenProvider;
 import com.flexcore.core.security.LoginRateLimiter;
 import com.flexcore.role.entity.Role;
@@ -34,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginRateLimiter loginRateLimiter;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Observed(name = "auth.register", contextualName = "User Registration")
@@ -64,7 +68,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Observed(name = "auth.login", contextualName = "User Login")
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
         loginRateLimiter.checkNotBlocked(email);
@@ -91,15 +95,45 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthResponse buildAuthResponse(User user) {
         Set<String> permissions = permissionsOf(user.getRole());
-        String token = jwtTokenProvider.generateAccessToken(
+        String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getId(), user.getEmail(), user.getRole().getName(), permissions);
+        RefreshTokenService.TokenPair tokenPair = refreshTokenService.issue(user.getId());
         return AuthResponse.builder()
-                .accessToken(token)
+                .accessToken(accessToken)
                 .tokenType("Bearer")
                 .userId(user.getId())
                 .email(user.getEmail())
                 .roleName(user.getRole().getName())
+                .refreshToken(tokenPair.rawToken())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        RefreshTokenService.TokenPair tokenPair;
+        try {
+            tokenPair = refreshTokenService.rotate(request.getRefreshToken());
+        } catch (InvalidRefreshTokenException ex) {
+            throw ex;
+        }
+        User user = tokenPair.user();
+        Set<String> permissions = permissionsOf(user.getRole());
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                user.getId(), user.getEmail(), user.getRole().getName(), permissions);
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .tokenType("Bearer")
+                .userId(user.getId())
+                .email(user.getEmail())
+                .roleName(user.getRole().getName())
+                .refreshToken(tokenPair.rawToken())
+                .build();
+    }
+
+    @Override
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
     }
 
     private Set<String> permissionsOf(Role role) {

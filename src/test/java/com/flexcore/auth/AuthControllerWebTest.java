@@ -31,7 +31,7 @@ class AuthControllerWebTest extends SecuredControllerSliceTest {
     void register_returns201WithToken() throws Exception {
         when(authService.register(any())).thenReturn(AuthResponse.builder()
                 .accessToken("jwt").tokenType("Bearer").userId(7L)
-                .email("new@test.com").roleName("MEMBER").build());
+                .email("new@test.com").roleName("MEMBER").refreshToken("refresh-1").build());
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -41,19 +41,43 @@ class AuthControllerWebTest extends SecuredControllerSliceTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").value("jwt"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-1"))
                 .andExpect(jsonPath("$.roleName").value("MEMBER"));
     }
 
     @Test
     void login_returns200() throws Exception {
         when(authService.login(any())).thenReturn(AuthResponse.builder()
-                .accessToken("jwt").tokenType("Bearer").userId(7L).roleName("MEMBER").build());
+                .accessToken("jwt").tokenType("Bearer").userId(7L).roleName("MEMBER").refreshToken("refresh-2").build());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"ahmed@test.com\",\"password\":\"Passw0rd!\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("jwt"));
+                .andExpect(jsonPath("$.accessToken").value("jwt"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-2"));
+    }
+
+    @Test
+    void refresh_returns200WithNewTokenPair() throws Exception {
+        when(authService.refresh(any())).thenReturn(AuthResponse.builder()
+                .accessToken("new-access").tokenType("Bearer").userId(7L)
+                .roleName("MEMBER").refreshToken("new-refresh").build());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"old-refresh\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access"))
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
+    }
+
+    @Test
+    void logout_returns204() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"some-token\"}"))
+                .andExpect(status().isNoContent());
     }
 
     @Test

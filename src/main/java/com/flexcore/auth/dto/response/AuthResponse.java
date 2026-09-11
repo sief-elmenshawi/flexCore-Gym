@@ -23,4 +23,7 @@ public class AuthResponse {
 
     @Schema(description = "Authenticated user role", example = "MEMBER")
     private String roleName;
+
+    @Schema(description = "Opaque refresh token used to obtain new access tokens", example = "abc...")
+    private String refreshToken;
 }

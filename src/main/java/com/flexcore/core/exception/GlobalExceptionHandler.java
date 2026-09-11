@@ -76,6 +76,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, message(request, MSG_BAD_CREDENTIALS), request);
     }
 
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, message(request, ex.getMessage()), request);
+    }
+
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex, HttpServletRequest request) {
         return build(HttpStatus.TOO_MANY_REQUESTS, message(request, ex.getCode(), ex.getArgs()), request);

@@ -129,6 +129,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:change-this-secret-in-production-change-this-secret-in-production}
     access-token-expiration-ms: 900000      # 15 min
+    refresh-token-expiration-ms: 604800000  # 7 days
   security:
     login-rate-limit:
       store: ${LOGIN_RATE_LIMIT_STORE:redis}   # 'redis' (distributed, default) or 'in-memory' (single-node fallback)
