@@ -145,7 +145,7 @@ class BookingConcurrencyTest {
                 gymClassRepository.delete(gc);
             });
             userRepository.findByEmail("concurrency-trainer@example.com").ifPresent(trainer -> {
-                subscriptionRepository.findByUserIdOrderByEndDateAsc(trainer.getId())
+                subscriptionRepository.findByUserIdAndDeletedAtIsNullOrderByEndDateAsc(trainer.getId())
                         .forEach(subscriptionRepository::delete);
                 userRepository.delete(trainer);
             });

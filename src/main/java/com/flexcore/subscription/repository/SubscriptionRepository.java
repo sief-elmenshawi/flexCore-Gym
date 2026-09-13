@@ -26,23 +26,26 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Page<Subscription> findAll(Specification<Subscription> spec, Pageable pageable);
 
     @EntityGraph(attributePaths = {"plan"})
-    List<Subscription> findByUserIdOrderByEndDateAsc(Long userId);
+    List<Subscription> findByUserIdAndDeletedAtIsNullOrderByEndDateAsc(Long userId);
 
-    Optional<Subscription> findByIdAndUserId(Long id, Long userId);
+    Optional<Subscription> findByIdAndDeletedAtIsNull(Long id);
 
-    boolean existsByUserIdAndStatusIn(Long userId, Collection<SubscriptionStatus> statuses);
+    Optional<Subscription> findByIdAndUserIdAndDeletedAtIsNull(Long id, Long userId);
 
-    long countByFamilyGroupIdAndStatus(Long familyGroupId, SubscriptionStatus status);
+    boolean existsByUserIdAndDeletedAtIsNullAndStatusIn(Long userId, Collection<SubscriptionStatus> statuses);
+
+    long countByFamilyGroupIdAndDeletedAtIsNullAndStatus(Long familyGroupId, SubscriptionStatus status);
 
     /**
      * Subscriptions that currently grant gym access: ACTIVE or FROZEN,
-     * and whose end date is still in the future.
+     * whose end date is still in the future, and not soft-deleted.
      */
     @EntityGraph(attributePaths = {"plan"})
     @Query("""
             select s from Subscription s
             where s.user.id = :userId
               and s.endDate > :now
+              and s.deletedAt is null
               and s.status in (
                   com.flexcore.subscription.enums.SubscriptionStatus.ACTIVE,
                   com.flexcore.subscription.enums.SubscriptionStatus.FROZEN)
@@ -59,6 +62,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             update Subscription s
             set s.status = :newStatus, s.lastModifiedDate = :now
             where s.status = com.flexcore.subscription.enums.SubscriptionStatus.ACTIVE
+              and s.deletedAt is null
               and s.endDate < :now
             """)
     int expireOverdue(@Param("now") LocalDateTime now, @Param("newStatus") SubscriptionStatus newStatus);
@@ -76,6 +80,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
                 s.frozenUntil = null,
                 s.lastModifiedDate = :now
             where s.status = com.flexcore.subscription.enums.SubscriptionStatus.FROZEN
+              and s.deletedAt is null
               and s.frozenUntil <= :now
             """)
     int thawElapsedFreezes(@Param("now") LocalDateTime now);
@@ -86,6 +91,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             SET s.status = com.flexcore.subscription.enums.SubscriptionStatus.CANCELLED,
                 s.familyGroup = null
             WHERE s.familyGroup.id = :groupId
+              AND s.deletedAt is null
             """)
     void cancelGroupSubscriptions(@Param("groupId") Long groupId);
 }

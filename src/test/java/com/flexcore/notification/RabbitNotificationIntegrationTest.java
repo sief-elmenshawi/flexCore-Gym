@@ -80,7 +80,7 @@ class RabbitNotificationIntegrationTest {
                 gymClassRepository.delete(gc);
             });
             userRepository.findByEmail("rabbit-trainer@example.com").ifPresent(trainer -> {
-                subscriptionRepository.findByUserIdOrderByEndDateAsc(trainer.getId())
+                subscriptionRepository.findByUserIdAndDeletedAtIsNullOrderByEndDateAsc(trainer.getId())
                         .forEach(subscriptionRepository::delete);
                 userRepository.delete(trainer);
             });

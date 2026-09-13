@@ -77,12 +77,12 @@ public class FamilyGroupServiceImpl implements FamilyGroupService {
         if (member.getId().equals(group.getOwnerUser().getId())) {
             throw new BusinessRuleViolationException("error.family.owner-already-member");
         }
-        if (subscriptionRepository.existsByUserIdAndStatusIn(member.getId(),
+        if (subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(member.getId(),
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))) {
             throw new BusinessRuleViolationException("error.subscription.already-active");
         }
 
-        long activeMembers = subscriptionRepository.countByFamilyGroupIdAndStatus(groupId, SubscriptionStatus.ACTIVE);
+        long activeMembers = subscriptionRepository.countByFamilyGroupIdAndDeletedAtIsNullAndStatus(groupId, SubscriptionStatus.ACTIVE);
         Integer maxMembers = group.getPlan().getMaxFamilyMembers();
         if (maxMembers != null && activeMembers >= maxMembers) {
             throw new BusinessRuleViolationException(
@@ -112,8 +112,8 @@ public class FamilyGroupServiceImpl implements FamilyGroupService {
         if (!group.getOwnerUser().getId().equals(requestingUserId)) {
             throw new AccessDeniedException("Only the family group owner can delete the group");
         }
-        if (subscriptionRepository.countByFamilyGroupIdAndStatus(groupId, SubscriptionStatus.ACTIVE) > 0
-                || subscriptionRepository.countByFamilyGroupIdAndStatus(groupId, SubscriptionStatus.FROZEN) > 0) {
+        if (subscriptionRepository.countByFamilyGroupIdAndDeletedAtIsNullAndStatus(groupId, SubscriptionStatus.ACTIVE) > 0
+                || subscriptionRepository.countByFamilyGroupIdAndDeletedAtIsNullAndStatus(groupId, SubscriptionStatus.FROZEN) > 0) {
             throw new BusinessRuleViolationException("error.family.group-has-active-members");
         }
 

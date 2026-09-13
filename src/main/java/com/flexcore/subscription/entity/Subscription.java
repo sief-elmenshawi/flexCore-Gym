@@ -52,6 +52,9 @@ public class Subscription extends Auditable {
     private LocalDateTime frozenAt;
     private LocalDateTime frozenUntil;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "family_group_id")
     private FamilyGroup familyGroup;

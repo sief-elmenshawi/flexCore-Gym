@@ -2,9 +2,6 @@ package com.flexcore.subscription.service.impl;
 
 import com.flexcore.core.exception.BusinessRuleViolationException;
 import com.flexcore.core.exception.ResourceNotFoundException;
-import com.flexcore.payment.entity.Payment;
-import com.flexcore.payment.repository.PaymentIdempotencyRepository;
-import com.flexcore.payment.repository.PaymentRepository;
 import com.flexcore.subscription.dto.request.FreezeSubscriptionRequest;
 import com.flexcore.subscription.dto.request.PurchaseSubscriptionRequest;
 import com.flexcore.subscription.dto.response.SubscriptionResponse;
@@ -41,8 +38,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final FamilyGroupRepository familyGroupRepository;
     private final UserRepository userRepository;
     private final SubscriptionMapper subscriptionMapper;
-    private final PaymentRepository paymentRepository;
-    private final PaymentIdempotencyRepository paymentIdempotencyRepository;
 
     @Override
     @Observed(name = "subscription.purchase", contextualName = "Purchase Subscription")
@@ -61,7 +56,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     .orElseThrow(() -> new ResourceNotFoundException("error.family-group.notfound", request.getFamilyGroupId()));
         }
 
-        if (subscriptionRepository.existsByUserIdAndStatusIn(user.getId(),
+        if (subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(user.getId(),
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))) {
             throw new BusinessRuleViolationException("error.subscription.already-active");
         }
@@ -149,7 +144,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (subscription.getStatus() != SubscriptionStatus.CANCELLED) {
             throw new BusinessRuleViolationException("error.subscription.reactivate-only-cancelled");
         }
-        if (subscriptionRepository.existsByUserIdAndStatusIn(subscription.getUser().getId(),
+        if (subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(subscription.getUser().getId(),
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))) {
             throw new BusinessRuleViolationException("error.subscription.already-active");
         }
@@ -170,19 +165,16 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new BusinessRuleViolationException("error.subscription.delete-permanent-only-cancelled-or-expired");
         }
 
-        List<Payment> payments = paymentRepository.findBySubscriptionId(id);
-        for (Payment p : payments) {
-            paymentIdempotencyRepository.deleteByPaymentId(p.getId());
-        }
-        paymentRepository.deleteAll(payments);
-
-        subscriptionRepository.delete(subscription);
+        // Soft delete: keep the row and its payment records for the financial
+        // audit trail; only hide it from user-facing queries.
+        subscription.setDeletedAt(LocalDateTime.now());
+        subscriptionRepository.save(subscription);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SubscriptionResponse> getMySubscriptions(Long userId) {
-        return subscriptionRepository.findByUserIdOrderByEndDateAsc(userId).stream()
+        return subscriptionRepository.findByUserIdAndDeletedAtIsNullOrderByEndDateAsc(userId).stream()
                 .map(subscriptionMapper::toResponse)
                 .toList();
     }
@@ -198,7 +190,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     private Subscription getOwnedSubscription(Long id, Long currentUserId, boolean privileged) {
-        Subscription subscription = subscriptionRepository.findById(id)
+        Subscription subscription = subscriptionRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("error.subscription.notfound", id));
 
         if (!privileged && !subscription.getUser().getId().equals(currentUserId)) {

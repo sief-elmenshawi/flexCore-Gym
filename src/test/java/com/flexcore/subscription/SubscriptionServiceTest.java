@@ -60,7 +60,7 @@ class SubscriptionServiceTest {
     void purchase_createsActiveSubscriptionEndingAfterPlanDuration() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(planRepository.findById(10L)).thenReturn(Optional.of(monthlyPlan));
-        when(subscriptionRepository.existsByUserIdAndStatusIn(1L,
+        when(subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(1L,
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))).thenReturn(false);
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptionMapper.toResponse(any(Subscription.class)))
@@ -80,7 +80,7 @@ class SubscriptionServiceTest {
     void purchase_whenUserAlreadyHasActiveSubscription_throws() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(planRepository.findById(10L)).thenReturn(Optional.of(monthlyPlan));
-        when(subscriptionRepository.existsByUserIdAndStatusIn(1L,
+        when(subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(1L,
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))).thenReturn(true);
 
         PurchaseSubscriptionRequest request = new PurchaseSubscriptionRequest();
@@ -101,7 +101,7 @@ class SubscriptionServiceTest {
                 .endDate(java.time.LocalDateTime.now().minusDays(30))
                 .build();
 
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(expired));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(expired));
 
         var freezeRequest = new com.flexcore.subscription.dto.request.FreezeSubscriptionRequest();
         freezeRequest.setDays(14);
@@ -121,7 +121,7 @@ class SubscriptionServiceTest {
                 .endDate(java.time.LocalDateTime.now().minusDays(1))
                 .build();
 
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(overdue));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(overdue));
 
         var freezeRequest = new com.flexcore.subscription.dto.request.FreezeSubscriptionRequest();
         freezeRequest.setDays(14);
@@ -143,7 +143,7 @@ class SubscriptionServiceTest {
                 .endDate(originalEnd)
                 .build();
 
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(active));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(active));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptionMapper.toResponse(any(Subscription.class)))
                 .thenReturn(SubscriptionResponse.builder().id(7L).status(SubscriptionStatus.FROZEN).build());
@@ -170,7 +170,7 @@ class SubscriptionServiceTest {
                 .endDate(java.time.LocalDateTime.now().plusDays(20))
                 .build();
 
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(active));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(active));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptionMapper.toResponse(any(Subscription.class)))
                 .thenReturn(SubscriptionResponse.builder().id(7L).status(SubscriptionStatus.CANCELLED).build());

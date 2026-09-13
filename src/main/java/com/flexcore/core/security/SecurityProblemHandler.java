@@ -52,6 +52,7 @@ public class SecurityProblemHandler implements AuthenticationEntryPoint, AccessD
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
-        objectMapper.writeValue(response.getWriter(), ErrorResponse.of(status, message, request.getRequestURI()));
+        objectMapper.writeValue(response.getWriter(),
+                ErrorResponse.of(status, code, message, request.getRequestURI()));
     }
 }

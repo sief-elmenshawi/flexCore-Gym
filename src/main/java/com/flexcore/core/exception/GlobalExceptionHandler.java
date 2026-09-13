@@ -58,37 +58,37 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
-        return buildCode(HttpStatus.NOT_FOUND, ex.getCode(), ex.getArgs(), request);
+        return build(HttpStatus.NOT_FOUND, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
-        return buildCode(HttpStatus.CONFLICT, ex.getCode(), ex.getArgs(), request);
+        return build(HttpStatus.CONFLICT, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleViolationException ex, HttpServletRequest request) {
-        return buildCode(HttpStatus.BAD_REQUEST, ex.getCode(), ex.getArgs(), request);
+        return build(HttpStatus.BAD_REQUEST, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, message(request, MSG_BAD_CREDENTIALS), request);
+        return build(HttpStatus.UNAUTHORIZED, MSG_BAD_CREDENTIALS, request);
     }
 
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, message(request, ex.getMessage()), request);
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
 
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex, HttpServletRequest request) {
-        return buildCode(HttpStatus.TOO_MANY_REQUESTS, ex.getCode(), ex.getArgs(), request);
+        return build(HttpStatus.TOO_MANY_REQUESTS, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, message(request, MSG_ACCESS_DENIED), request);
+        return build(HttpStatus.FORBIDDEN, MSG_ACCESS_DENIED, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -97,14 +97,16 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors()
                 .forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
 
+        Locale locale = localeResolver.resolveLocale(request);
+        String resolved = messageSource.getMessage(MSG_VALIDATION_FAILED, null, MSG_VALIDATION_FAILED, locale);
         ErrorResponse body = ErrorResponse.validation(HttpStatus.BAD_REQUEST,
-                message(request, MSG_VALIDATION_FAILED), request.getRequestURI(), fieldErrors);
+                MSG_VALIDATION_FAILED, resolved, request.getRequestURI(), fieldErrors);
         return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
     public ResponseEntity<ErrorResponse> handleConstraintViolation(Exception ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, message(request, MSG_PARAM_INVALID, ex.getMessage()), request);
+        return build(HttpStatus.BAD_REQUEST, MSG_PARAM_INVALID, request, ex.getMessage());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -122,71 +124,63 @@ public class GlobalExceptionHandler {
                 String allowed = Arrays.stream(targetType.getEnumConstants())
                         .map(Object::toString)
                         .collect(Collectors.joining(", "));
-                return build(HttpStatus.BAD_REQUEST,
-                        message(request, MSG_BODY_INVALID_ENUM, value, field, allowed), request);
+                return build(HttpStatus.BAD_REQUEST, MSG_BODY_INVALID_ENUM, request, value, field, allowed);
             }
             String expected = targetType != null ? targetType.getSimpleName() : "unknown";
-            return build(HttpStatus.BAD_REQUEST,
-                    message(request, MSG_BODY_INVALID_FORMAT, value, field, expected), request);
+            return build(HttpStatus.BAD_REQUEST, MSG_BODY_INVALID_FORMAT, request, value, field, expected);
         }
         log.warn("Body unreadable on {}: root={}", request.getRequestURI(),
                 ex.getRootCause() != null ? ex.getRootCause().toString() : "n/a");
-        return build(HttpStatus.BAD_REQUEST, message(request, MSG_BODY_MALFORMED), request);
+        return build(HttpStatus.BAD_REQUEST, MSG_BODY_MALFORMED, request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Data integrity violation on {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
-        return build(HttpStatus.CONFLICT, message(request, MSG_DATA_INTEGRITY), request);
+        return build(HttpStatus.CONFLICT, MSG_DATA_INTEGRITY, request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, message(request, MSG_RESOURCE_NOT_FOUND), request);
+        return build(HttpStatus.NOT_FOUND, MSG_RESOURCE_NOT_FOUND, request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        return build(HttpStatus.METHOD_NOT_ALLOWED, message(request, MSG_METHOD_NOT_ALLOWED, ex.getMethod()), request);
+        return build(HttpStatus.METHOD_NOT_ALLOWED, MSG_METHOD_NOT_ALLOWED, request, ex.getMethod());
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, message(request, MSG_MEDIA_TYPE_UNSUPPORTED), request);
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, MSG_MEDIA_TYPE_UNSUPPORTED, request);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, message(request, MSG_PARAM_MISSING, ex.getParameterName()), request);
+        return build(HttpStatus.BAD_REQUEST, MSG_PARAM_MISSING, request, ex.getParameterName());
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, message(request, MSG_PARAM_INVALID, ex.getName()), request);
+        return build(HttpStatus.BAD_REQUEST, MSG_PARAM_INVALID, request, ex.getName());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, message(request, MSG_INTERNAL), request);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, MSG_INTERNAL, request);
     }
 
-    private String message(HttpServletRequest request, String code, Object... args) {
+    private ResponseEntity<ErrorResponse> build(HttpStatus status, String messageKey, Object[] args, HttpServletRequest request) {
         Locale locale = localeResolver.resolveLocale(request);
-        Object[] rawArgs = java.util.Arrays.stream(args)
+        Object[] rawArgs = Arrays.stream(args)
                 .map(arg -> arg instanceof Number ? arg.toString() : arg)
                 .toArray();
-        return messageSource.getMessage(code, rawArgs, code, locale);
+        String resolved = messageSource.getMessage(messageKey, rawArgs, messageKey, locale);
+        return ResponseEntity.status(status).body(ErrorResponse.of(status, messageKey, resolved, request.getRequestURI(), rawArgs));
     }
 
-    private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {
-        return ResponseEntity.status(status).body(ErrorResponse.of(status, message, request.getRequestURI()));
-    }
-
-    private ResponseEntity<ErrorResponse> buildCode(HttpStatus status, String code, Object[] args, HttpServletRequest request) {
-        Object[] rawArgs = java.util.Arrays.stream(args)
-                .map(arg -> arg instanceof Number ? arg.toString() : arg)
-                .toArray();
-        return ResponseEntity.status(status).body(ErrorResponse.of(status, code, request.getRequestURI(), rawArgs));
+    private ResponseEntity<ErrorResponse> build(HttpStatus status, String messageKey, HttpServletRequest request, Object... args) {
+        return build(status, messageKey, args, request);
     }
 }

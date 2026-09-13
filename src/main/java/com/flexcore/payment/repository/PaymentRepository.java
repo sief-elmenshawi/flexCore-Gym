@@ -17,8 +17,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Page<Payment> findBySubscriptionUserId(Long userId, Pageable pageable);
 
-    List<Payment> findBySubscriptionId(Long subscriptionId);
-
     interface MethodTotal {
         String getMethod();
 

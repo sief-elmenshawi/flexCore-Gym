@@ -78,7 +78,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private Payment doInitiate(InitiatePaymentRequest request, Long currentUserId, boolean privileged) {
-        Subscription subscription = subscriptionRepository.findById(request.getSubscriptionId())
+        Subscription subscription = subscriptionRepository.findByIdAndDeletedAtIsNull(request.getSubscriptionId())
                 .orElseThrow(() -> new ResourceNotFoundException("error.subscription.notfound", request.getSubscriptionId()));
 
         if (!privileged && !subscription.getUser().getId().equals(currentUserId)) {

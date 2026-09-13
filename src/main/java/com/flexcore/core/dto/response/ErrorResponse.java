@@ -19,7 +19,10 @@ public record ErrorResponse(
         @Schema(description = "HTTP status reason phrase", example = "Not Found")
         String error,
 
-        @Schema(description = "Message key the client can localize, or a ready message", example = "error.booking.duplicate")
+        @Schema(description = "Stable message key; the single source of truth clients can localize or branch on", example = "error.booking.duplicate")
+        String messageKey,
+
+        @Schema(description = "Localized message text resolved by the server for the request language", example = "You already have an active booking for this class")
         String message,
 
         @Schema(description = "Request path that caused the error", example = "/api/v1/users/99")
@@ -32,15 +35,15 @@ public record ErrorResponse(
         Object[] arguments
 ) {
 
-    public static ErrorResponse of(HttpStatus httpStatus, String message, String path) {
-        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, null, null);
+    public static ErrorResponse of(HttpStatus httpStatus, String messageKey, String message, String path) {
+        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), messageKey, message, path, null, null);
     }
 
-    public static ErrorResponse of(HttpStatus httpStatus, String message, String path, Object[] arguments) {
-        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, null, arguments);
+    public static ErrorResponse of(HttpStatus httpStatus, String messageKey, String message, String path, Object[] arguments) {
+        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), messageKey, message, path, null, arguments);
     }
 
-    public static ErrorResponse validation(HttpStatus httpStatus, String message, String path, Map<String, String> fieldErrors) {
-        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, fieldErrors, null);
+    public static ErrorResponse validation(HttpStatus httpStatus, String messageKey, String message, String path, Map<String, String> fieldErrors) {
+        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), messageKey, message, path, fieldErrors, null);
     }
 }

@@ -74,7 +74,7 @@ class FamilyGroupServiceTest {
     void addMember_whenMemberAlreadyHasActiveSubscription_throws() {
         when(familyGroupRepository.findById(30L)).thenReturn(Optional.of(group));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(subscriptionRepository.existsByUserIdAndStatusIn(2L,
+        when(subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(2L,
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))).thenReturn(true);
 
         assertThrows(BusinessRuleViolationException.class,
@@ -87,9 +87,9 @@ class FamilyGroupServiceTest {
     void addMember_whenMemberHasNoSubscription_createsMembership() {
         when(familyGroupRepository.findById(30L)).thenReturn(Optional.of(group));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(subscriptionRepository.existsByUserIdAndStatusIn(2L,
+        when(subscriptionRepository.existsByUserIdAndDeletedAtIsNullAndStatusIn(2L,
                 List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))).thenReturn(false);
-        when(subscriptionRepository.countByFamilyGroupIdAndStatus(30L, SubscriptionStatus.ACTIVE)).thenReturn(1L);
+        when(subscriptionRepository.countByFamilyGroupIdAndDeletedAtIsNullAndStatus(30L, SubscriptionStatus.ACTIVE)).thenReturn(1L);
         when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
 
         familyGroupService.addMember(30L, request(2L), 1L);
