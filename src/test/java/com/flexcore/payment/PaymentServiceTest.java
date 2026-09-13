@@ -86,7 +86,7 @@ class PaymentServiceTest {
 
     @Test
     void initiate_whenExpiredSubscriptionPaidSuccessfully_renewsFromNow() {
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
         when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -106,7 +106,7 @@ class PaymentServiceTest {
     @Test
     void initiate_whenSubscriptionCancelled_throwsWithoutCharging() {
         subscription.setStatus(SubscriptionStatus.CANCELLED);
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
 
         assertThrows(BusinessRuleViolationException.class,
                 () -> paymentService.initiate(request(PaymentMethod.MOCK_FAWRY), null, 3L, false));
@@ -118,7 +118,7 @@ class PaymentServiceTest {
     @Test
     void initiate_whenGatewayRejects_paymentFailedAndNoRenewal() {
         subscription.setStatus(SubscriptionStatus.EXPIRED);
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
         when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_VODAFONE_CASH)).thenReturn(false);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -134,7 +134,7 @@ class PaymentServiceTest {
         LocalDateTime originalEnd = LocalDateTime.now().plusDays(12);
         subscription.setStartDate(LocalDateTime.now().minusDays(18));
         subscription.setEndDate(originalEnd);
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
         when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -146,7 +146,7 @@ class PaymentServiceTest {
 
     @Test
     void initiate_onSuccess_persistsSuccessfulPaymentWithPaidAt() {
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
         when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -161,7 +161,7 @@ class PaymentServiceTest {
 
     @Test
     void initiate_onFailure_persistsFailedPaymentWithoutPaidAt() {
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
         when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(false);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -238,7 +238,7 @@ class PaymentServiceTest {
         when(idempotencyRepository.findByUserIdAndIdempotencyKey(3L, "new-key"))
                 .thenReturn(java.util.Optional.empty());
         when(idempotencyRepository.claim(3L, "new-key")).thenReturn(1);
-        when(subscriptionRepository.findById(7L)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(subscription));
         when(mockPaymentGateway.process(monthlyPlan.getPrice(), PaymentMethod.MOCK_INSTAPAY)).thenReturn(true);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> {
             Payment saved = inv.getArgument(0);
