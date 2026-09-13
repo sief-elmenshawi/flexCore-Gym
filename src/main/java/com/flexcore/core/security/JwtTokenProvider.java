@@ -20,8 +20,20 @@ public class JwtTokenProvider {
 
     public JwtTokenProvider(@Value("${app.jwt.secret}") String secret,
                             @Value("${app.jwt.access-token-expiration-ms}") long accessTokenExpirationMs) {
+        if (!isStrongSecret(secret)) {
+            throw new IllegalStateException(
+                    "app.jwt.secret is missing, too short, or still the placeholder value. "
+                            + "Set a strong JWT_SECRET (>= 32 ASCII bytes) before starting the service.");
+        }
+        // hmacShaKeyFor throws if < 256 bits, so >= 32 ASCII bytes is also enforced here.
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpirationMs = accessTokenExpirationMs;
+    }
+
+    private static boolean isStrongSecret(String secret) {
+        return secret != null
+                && secret.getBytes(StandardCharsets.UTF_8).length >= 32
+                && !"change-this-secret-in-production-change-this-secret-in-production".equals(secret);
     }
 
     public String generateAccessToken(Long userId, String email, String roleName, Set<String> permissions) {

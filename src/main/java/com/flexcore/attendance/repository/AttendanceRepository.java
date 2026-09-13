@@ -10,6 +10,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    @EntityGraph(attributePaths = {"user", "subscription"})
+    @EntityGraph(attributePaths = {"user", "subscription", "checkedInBy"})
     Page<Attendance> findByUserIdOrderByCheckInAtDesc(Long userId, Pageable pageable);
 }

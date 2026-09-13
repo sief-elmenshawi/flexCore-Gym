@@ -28,4 +28,13 @@ public final class SubscriptionSpecifications {
                 ? cb.conjunction()
                 : cb.lessThanOrEqualTo(root.get("endDate"), dateTime);
     }
+
+    /**
+     * Restricts the result to non-soft-deleted subscriptions. Every read path that exposes
+     * historical lists (e.g. search, admin listing, expiring-soon) must compose this so
+     * soft-deleted rows never surface.
+     */
+    public static Specification<Subscription> notDeleted() {
+        return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
+    }
 }

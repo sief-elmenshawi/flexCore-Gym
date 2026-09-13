@@ -183,7 +183,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Transactional(readOnly = true)
     public Page<SubscriptionResponse> expiringSoon(int withinDays, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
-        Specification<Subscription> spec = Specification.where(SubscriptionSpecifications.hasStatus(SubscriptionStatus.ACTIVE))
+        Specification<Subscription> spec = Specification.where(SubscriptionSpecifications.notDeleted())
+                .and(SubscriptionSpecifications.hasStatus(SubscriptionStatus.ACTIVE))
                 .and(SubscriptionSpecifications.endsBefore(now.plusDays(withinDays)));
 
         return subscriptionRepository.findAll(spec, pageable).map(subscriptionMapper::toResponse);

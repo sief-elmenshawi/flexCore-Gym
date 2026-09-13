@@ -116,6 +116,6 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public Page<PaymentResponse> getMyPayments(Long userId, Pageable pageable) {
-        return paymentRepository.findBySubscriptionUserId(userId, pageable).map(paymentMapper::toResponse);
+        return paymentRepository.findActiveSubscriptionPaymentsByUserId(userId, pageable).map(paymentMapper::toResponse);
     }
 }

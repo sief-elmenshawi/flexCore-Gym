@@ -26,6 +26,12 @@ management:
         enabled: false
 
 app:
+  jwt:
+    # Strong test signing key (>= 32 bytes); the placeholder in application.yml is
+    # rejected by JwtTokenProvider to force real secrets in every environment.
+    secret: ${JWT_TEST_SECRET:test-secret-which-is-long-enough-for-hs256-signing-1234567890}
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-ms: 604800000
   jobs:
     # Integration tests drive the outbox publisher manually; keep the real scheduler out.
     outbox-poll-enabled: false

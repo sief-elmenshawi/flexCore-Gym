@@ -15,7 +15,17 @@ import java.util.List;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    Page<Payment> findBySubscriptionUserId(Long userId, Pageable pageable);
+    /**
+     * Returns payments of a user, excluding payments that belong to soft-deleted
+     * subscriptions. Without the {@code deletedAt IS NULL} guard, a user could still see
+     * history of a subscription they cancelled/deleted.
+     */
+    @Query("""
+            SELECT p FROM Payment p
+            WHERE p.subscription.user.id = :userId
+              AND p.subscription.deletedAt IS NULL
+            """)
+    Page<Payment> findActiveSubscriptionPaymentsByUserId(@Param("userId") Long userId, Pageable pageable);
 
     interface MethodTotal {
         String getMethod();

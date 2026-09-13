@@ -106,7 +106,27 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
     public ResponseEntity<ErrorResponse> handleConstraintViolation(Exception ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, MSG_PARAM_INVALID, request, ex.getMessage());
+        Map<String, String> fieldErrors = new HashMap<>();
+        if (ex instanceof ConstraintViolationException cve) {
+            cve.getConstraintViolations().forEach(v ->
+                fieldErrors.put(v.getPropertyPath().toString(), v.getMessage()));
+        } else if (ex instanceof HandlerMethodValidationException handlerMethodValidationException) {
+            handlerMethodValidationException.getParameterValidationResults().forEach(result -> {
+                String field = result.getMethodParameter().getParameterName() != null
+                        ? result.getMethodParameter().getParameterName()
+                        : "argument";
+                result.getResolvableErrors().forEach(e -> {
+                    String raw = e.getDefaultMessage() != null ? e.getDefaultMessage() : e.toString();
+                    fieldErrors.put(field, raw);
+                });
+            });
+        }
+
+        Locale locale = localeResolver.resolveLocale(request);
+        String resolved = messageSource.getMessage(MSG_VALIDATION_FAILED, null, MSG_VALIDATION_FAILED, locale);
+        ErrorResponse body = ErrorResponse.validation(HttpStatus.BAD_REQUEST,
+                MSG_VALIDATION_FAILED, resolved, request.getRequestURI(), fieldErrors);
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

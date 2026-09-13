@@ -22,10 +22,10 @@ import java.util.Optional;
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long>, JpaSpecificationExecutor<Subscription> {
 
     @Override
-    @EntityGraph(attributePaths = {"user", "plan"})
+    @EntityGraph(attributePaths = {"user", "plan", "familyGroup"})
     Page<Subscription> findAll(Specification<Subscription> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"plan"})
+    @EntityGraph(attributePaths = {"plan", "user"})
     List<Subscription> findByUserIdAndDeletedAtIsNullOrderByEndDateAsc(Long userId);
 
     Optional<Subscription> findByIdAndDeletedAtIsNull(Long id);

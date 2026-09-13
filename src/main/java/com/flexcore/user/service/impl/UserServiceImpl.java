@@ -2,6 +2,7 @@ package com.flexcore.user.service.impl;
 
 import com.flexcore.core.exception.DuplicateResourceException;
 import com.flexcore.core.exception.ResourceNotFoundException;
+import com.flexcore.auth.repository.RefreshTokenRepository;
 import com.flexcore.role.entity.Role;
 import com.flexcore.role.repository.RoleRepository;
 import com.flexcore.user.dto.request.CreateUserRequest;
@@ -27,6 +28,7 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     @Transactional
@@ -99,6 +101,9 @@ public class UserServiceImpl implements UserService {
         User user = findUser(id);
         user.setActive(false);
         userRepository.save(user);
+        // Kill any outstanding refresh sessions so a deactivated account cannot keep
+        // rotating its tokens and minting new access tokens.
+        refreshTokenRepository.revokeAllActiveForUser(id);
     }
 
     private User findUser(Long id) {

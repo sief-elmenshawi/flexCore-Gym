@@ -187,7 +187,7 @@ class PaymentServiceTest {
                 .build();
         org.springframework.data.domain.Page<Payment> page =
                 new org.springframework.data.domain.PageImpl<>(List.of(payment), pageable, 1);
-        when(paymentRepository.findBySubscriptionUserId(3L, pageable)).thenReturn(page);
+        when(paymentRepository.findActiveSubscriptionPaymentsByUserId(3L, pageable)).thenReturn(page);
         when(paymentMapper.toResponse(payment)).thenReturn(PaymentResponse.builder()
                 .id(9L)
                 .subscriptionId(7L)
@@ -200,7 +200,7 @@ class PaymentServiceTest {
 
         assertEquals(1, result.getTotalElements());
         assertEquals(9L, result.getContent().get(0).getId());
-        verify(paymentRepository).findBySubscriptionUserId(3L, pageable);
+        verify(paymentRepository).findActiveSubscriptionPaymentsByUserId(3L, pageable);
     }
 
     @Test

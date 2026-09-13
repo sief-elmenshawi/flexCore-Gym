@@ -27,6 +27,7 @@ public class RefreshTokenService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenFamilyRevoker refreshTokenFamilyRevoker;
 
     @Value("${app.jwt.refresh-token-expiration-ms}")
     private long refreshTokenExpirationMs;
@@ -73,7 +74,9 @@ public class RefreshTokenService {
 
         if (stored.getReplacedByToken() != null) {
             log.warn("Reuse of rotated refresh token for user {}; revoking token family", stored.getUser().getId());
-            refreshTokenRepository.revokeAllActiveForUser(stored.getUser().getId());
+            // Runs in a REQUIRES_NEW transaction so the revocation survives the rollback
+            // triggered by the InvalidRefreshTokenException thrown right after.
+            refreshTokenFamilyRevoker.revokeAllActiveForUser(stored.getUser().getId());
             throw new InvalidRefreshTokenException();
         }
 

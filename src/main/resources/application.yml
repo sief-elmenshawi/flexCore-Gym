@@ -138,6 +138,7 @@ app:
       block-minutes: 5                # how long further logins are rejected
   jobs:
     subscription-maintenance-cron: "0 */30 * * * *"   # thaw elapsed freezes + expire overdue
+    refresh-token-purge-cron: "0 0 3 * * *"           # purge stale refresh tokens daily at 03:00
     outbox-poll-enabled: true                         # false disables the outbox worker outright
     outbox-poll-delay-ms: 5000                        # outbox worker polls every 5s
     outbox-batch-size: 100                            # max events claimed per poll

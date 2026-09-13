@@ -35,7 +35,7 @@ public class RoleServiceImpl implements RoleService {
     public RoleResponse create(CreateRoleRequest request) {
         String name = request.getName().trim().toUpperCase();
         if (roleRepository.existsByName(name)) {
-            throw new DuplicateResourceException("Role already exists: " + name);
+            throw new DuplicateResourceException("error.role.exists", name);
         }
 
         Role role = Role.builder()

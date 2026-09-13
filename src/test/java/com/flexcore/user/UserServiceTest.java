@@ -1,6 +1,7 @@
 package com.flexcore.user;
 
 import com.flexcore.core.exception.DuplicateResourceException;
+import com.flexcore.auth.repository.RefreshTokenRepository;
 import com.flexcore.role.entity.Role;
 import com.flexcore.role.repository.RoleRepository;
 import com.flexcore.user.dto.request.CreateUserRequest;
@@ -33,6 +34,7 @@ class UserServiceTest {
     @Mock private RoleRepository roleRepository;
     @Mock private UserMapper userMapper;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -77,5 +79,18 @@ class UserServiceTest {
         assertEquals("ahmed@test.com", captor.getValue().getEmail());
         assertEquals("Ahmed Hassan", captor.getValue().getFullName());
         assertEquals("$2a$hashed", captor.getValue().getPasswordHash());
+    }
+
+    @Test
+    void deactivate_revokesOutstandingRefreshTokens() {
+        User user = User.builder().id(7L).email("ahmed@test.com").active(true).build();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.deactivate(7L);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals(false, captor.getValue().isActive());
+        verify(refreshTokenRepository).revokeAllActiveForUser(7L);
     }
 }
