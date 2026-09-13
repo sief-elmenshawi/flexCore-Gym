@@ -4,6 +4,10 @@
 [![Codecov](https://codecov.io/gh/sief-elmenshawi/flexCore-Gym/graph/badge.svg)](https://codecov.io/gh/sief-elmenshawi/flexCore-Gym)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+> **Part of the FlexCore project.** This is the backend API. The frontend lives in a
+> separate repo: **[flexcore-web](https://github.com/sief-elmenshawi/flexcore-web)**
+> (React + TypeScript + Ant Design).
+
 A solo backend portfolio project (Java 17 / Spring Boot) demonstrating RBAC security,
 concurrency-safe booking, event-driven delivery via a transactional outbox + RabbitMQ,
 distributed tracing, a subscription state machine with freeze support, mock payments,
