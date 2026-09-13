@@ -15,6 +15,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +36,7 @@ public class FamilyGroupController {
     private final FamilyGroupService familyGroupService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('BOOK_CLASS')")
     @Observed(name = "http.createFamilyGroup", contextualName = "POST /api/v1/family-groups")
     @Operation(summary = "Create a family group for the current user and activate the owner's subscription")
     @ApiResponses({
@@ -47,6 +50,7 @@ public class FamilyGroupController {
     }
 
     @PostMapping("/{id}/members")
+    @PreAuthorize("hasAuthority('BOOK_CLASS')")
     @Observed(name = "http.addFamilyMember", contextualName = "POST /api/v1/family-groups/{id}/members")
     @Operation(summary = "Add a member to a family group (owner only)")
     @ApiResponses({
@@ -57,6 +61,19 @@ public class FamilyGroupController {
     public ResponseEntity<FamilyGroupResponse> addMember(@PathVariable Long id,
                                                          @Valid @RequestBody AddFamilyMemberRequest request) {
         return ResponseEntity.ok(familyGroupService.addMember(id, request, SecurityUtils.getCurrentUserId()));
+    }
+
+    @DeleteMapping("/{id}/purge")
+    @Observed(name = "http.purgeFamilyGroup", contextualName = "DELETE /api/v1/family-groups/{id}/purge")
+    @Operation(summary = "Permanently delete a family group (cancels its subscriptions)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Family group deleted"),
+            @ApiResponse(responseCode = "403", description = "Only the owner can delete the group"),
+            @ApiResponse(responseCode = "400", description = "Group must have no active members")
+    })
+    public ResponseEntity<Void> purge(@PathVariable Long id) {
+        familyGroupService.deletePermanently(id, SecurityUtils.getCurrentUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my")

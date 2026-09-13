@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ public class PTSessionController {
     private final PTSessionService ptSessionService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('BOOK_CLASS')")
     @Observed(name = "http.bookPTSession", contextualName = "POST /api/v1/pt-sessions")
     @Operation(summary = "Book a personal training session with a trainer",
             description = "Validates the trainer has no overlapping scheduled session.")
@@ -46,6 +48,19 @@ public class PTSessionController {
     public ResponseEntity<PTSessionResponse> book(@Valid @RequestBody BookPTSessionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ptSessionService.book(request, SecurityUtils.getCurrentUserId()));
+    }
+
+    @DeleteMapping("/{id}/purge")
+    @Observed(name = "http.purgePTSession", contextualName = "DELETE /api/v1/pt-sessions/{id}/purge")
+    @Operation(summary = "Permanently delete a cancelled PT session")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "PT session permanently deleted"),
+            @ApiResponse(responseCode = "403", description = "Not your session"),
+            @ApiResponse(responseCode = "400", description = "Only cancelled sessions can be purged")
+    })
+    public ResponseEntity<Void> purge(@PathVariable Long id) {
+        ptSessionService.deletePermanently(id, SecurityUtils.getCurrentUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/mine")

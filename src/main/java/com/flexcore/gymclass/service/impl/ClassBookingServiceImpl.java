@@ -115,6 +115,21 @@ public class ClassBookingServiceImpl implements ClassBookingService {
         }
     }
 
+    @Observed(name = "booking.deletePermanently", contextualName = "Delete Booking Permanently")
+    @Transactional
+    public void deletePermanently(Long bookingId, Long requestingUserId) {
+        ClassBooking booking = classBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("error.class-booking.notfound", bookingId));
+
+        if (!booking.getUser().getId().equals(requestingUserId)) {
+            throw new AccessDeniedException("You can only delete your own bookings");
+        }
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new BusinessRuleViolationException("error.booking.delete-permanent-only-cancelled");
+        }
+        classBookingRepository.delete(booking);
+    }
+
     @Transactional(readOnly = true)
     public Page<ClassBookingResponse> getMyBookings(Long userId, Pageable pageable) {
         return classBookingRepository.findByUserIdOrderByBookedAtDesc(userId, pageable)

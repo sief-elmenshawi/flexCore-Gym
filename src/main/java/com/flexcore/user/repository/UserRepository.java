@@ -21,4 +21,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByRole_Id(Long roleId);
+
+    @EntityGraph(attributePaths = {"role"})
+    Page<User> findByRole_Name(String roleName, Pageable pageable);
 }

@@ -19,21 +19,28 @@ public record ErrorResponse(
         @Schema(description = "HTTP status reason phrase", example = "Not Found")
         String error,
 
-        @Schema(description = "Detailed error message")
+        @Schema(description = "Message key the client can localize, or a ready message", example = "error.booking.duplicate")
         String message,
 
         @Schema(description = "Request path that caused the error", example = "/api/v1/users/99")
         String path,
 
         @Schema(description = "Validation errors per field")
-        Map<String, String> fieldErrors
+        Map<String, String> fieldErrors,
+
+        @Schema(description = "Arguments interpolated into the localized message")
+        Object[] arguments
 ) {
 
     public static ErrorResponse of(HttpStatus httpStatus, String message, String path) {
-        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, null);
+        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, null, null);
+    }
+
+    public static ErrorResponse of(HttpStatus httpStatus, String message, String path, Object[] arguments) {
+        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, null, arguments);
     }
 
     public static ErrorResponse validation(HttpStatus httpStatus, String message, String path, Map<String, String> fieldErrors) {
-        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, fieldErrors);
+        return new ErrorResponse(Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), message, path, fieldErrors, null);
     }
 }

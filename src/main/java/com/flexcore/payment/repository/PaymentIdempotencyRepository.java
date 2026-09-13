@@ -15,6 +15,10 @@ public interface PaymentIdempotencyRepository extends JpaRepository<PaymentIdemp
     Optional<PaymentIdempotency> findByUserIdAndIdempotencyKey(Long userId, String idempotencyKey);
 
     @Modifying
+    @Query("DELETE FROM PaymentIdempotency p WHERE p.payment.id = :paymentId")
+    void deleteByPaymentId(@Param("paymentId") Long paymentId);
+
+    @Modifying
     @Query(value = """
             INSERT INTO payment_idempotency (user_id, idempotency_key, created_date)
             VALUES (:userId, :idempotencyKey, CURRENT_TIMESTAMP)

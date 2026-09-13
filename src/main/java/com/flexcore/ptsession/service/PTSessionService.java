@@ -11,5 +11,7 @@ public interface PTSessionService {
 
     void cancel(Long sessionId, Long requestingUserId);
 
+    void deletePermanently(Long sessionId, Long requestingUserId);
+
     Page<PTSessionResponse> getMySessions(Long userId, String roleName, Pageable pageable);
 }

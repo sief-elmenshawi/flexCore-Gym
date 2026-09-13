@@ -15,6 +15,10 @@ public interface UserService {
 
     Page<UserResponse> getAll(Pageable pageable);
 
+    Page<UserResponse> getTrainers(Pageable pageable);
+
+    Page<UserResponse> getMembers(Pageable pageable);
+
     UserResponse updateProfile(Long userId, UpdateProfileRequest request);
 
     UserResponse update(Long id, UpdateUserRequest request);

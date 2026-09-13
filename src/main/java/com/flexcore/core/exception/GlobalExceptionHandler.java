@@ -58,17 +58,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, message(request, ex.getCode(), ex.getArgs()), request);
+        return buildCode(HttpStatus.NOT_FOUND, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, message(request, ex.getCode(), ex.getArgs()), request);
+        return buildCode(HttpStatus.CONFLICT, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, message(request, ex.getCode(), ex.getArgs()), request);
+        return buildCode(HttpStatus.BAD_REQUEST, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -83,7 +83,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex, HttpServletRequest request) {
-        return build(HttpStatus.TOO_MANY_REQUESTS, message(request, ex.getCode(), ex.getArgs()), request);
+        return buildCode(HttpStatus.TOO_MANY_REQUESTS, ex.getCode(), ex.getArgs(), request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -181,5 +181,12 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {
         return ResponseEntity.status(status).body(ErrorResponse.of(status, message, request.getRequestURI()));
+    }
+
+    private ResponseEntity<ErrorResponse> buildCode(HttpStatus status, String code, Object[] args, HttpServletRequest request) {
+        Object[] rawArgs = java.util.Arrays.stream(args)
+                .map(arg -> arg instanceof Number ? arg.toString() : arg)
+                .toArray();
+        return ResponseEntity.status(status).body(ErrorResponse.of(status, code, request.getRequestURI(), rawArgs));
     }
 }

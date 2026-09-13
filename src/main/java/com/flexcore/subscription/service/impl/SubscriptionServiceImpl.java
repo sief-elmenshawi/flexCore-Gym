@@ -2,6 +2,9 @@ package com.flexcore.subscription.service.impl;
 
 import com.flexcore.core.exception.BusinessRuleViolationException;
 import com.flexcore.core.exception.ResourceNotFoundException;
+import com.flexcore.payment.entity.Payment;
+import com.flexcore.payment.repository.PaymentIdempotencyRepository;
+import com.flexcore.payment.repository.PaymentRepository;
 import com.flexcore.subscription.dto.request.FreezeSubscriptionRequest;
 import com.flexcore.subscription.dto.request.PurchaseSubscriptionRequest;
 import com.flexcore.subscription.dto.response.SubscriptionResponse;
@@ -38,6 +41,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final FamilyGroupRepository familyGroupRepository;
     private final UserRepository userRepository;
     private final SubscriptionMapper subscriptionMapper;
+    private final PaymentRepository paymentRepository;
+    private final PaymentIdempotencyRepository paymentIdempotencyRepository;
 
     @Override
     @Observed(name = "subscription.purchase", contextualName = "Purchase Subscription")
@@ -133,6 +138,45 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription.setStatus(SubscriptionStatus.CANCELLED);
         return subscriptionMapper.toResponse(subscriptionRepository.save(subscription));
+    }
+
+    @Override
+    @Observed(name = "subscription.reactivate", contextualName = "Reactivate Subscription")
+    @Transactional
+    public SubscriptionResponse reactivate(Long id, Long currentUserId, boolean privileged) {
+        Subscription subscription = getOwnedSubscription(id, currentUserId, privileged);
+
+        if (subscription.getStatus() != SubscriptionStatus.CANCELLED) {
+            throw new BusinessRuleViolationException("error.subscription.reactivate-only-cancelled");
+        }
+        if (subscriptionRepository.existsByUserIdAndStatusIn(subscription.getUser().getId(),
+                List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN))) {
+            throw new BusinessRuleViolationException("error.subscription.already-active");
+        }
+
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setFrozenAt(null);
+        subscription.setFrozenUntil(null);
+        return subscriptionMapper.toResponse(subscriptionRepository.save(subscription));
+    }
+
+    @Override
+    @Observed(name = "subscription.deletePermanently", contextualName = "Delete Subscription Permanently")
+    @Transactional
+    public void deletePermanently(Long id, Long currentUserId, boolean privileged) {
+        Subscription subscription = getOwnedSubscription(id, currentUserId, privileged);
+
+        if (subscription.getStatus() != SubscriptionStatus.CANCELLED && subscription.getStatus() != SubscriptionStatus.EXPIRED) {
+            throw new BusinessRuleViolationException("error.subscription.delete-permanent-only-cancelled-or-expired");
+        }
+
+        List<Payment> payments = paymentRepository.findBySubscriptionId(id);
+        for (Payment p : payments) {
+            paymentIdempotencyRepository.deleteByPaymentId(p.getId());
+        }
+        paymentRepository.deleteAll(payments);
+
+        subscriptionRepository.delete(subscription);
     }
 
     @Override

@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -101,6 +100,25 @@ public class FamilyGroupServiceImpl implements FamilyGroupService {
                 .build();
         subscriptionRepository.save(memberSubscription);
 
+        return subscriptionMapper.toResponse(group);
+    }
+
+    @Override
+    @Transactional
+    public FamilyGroupResponse deletePermanently(Long groupId, Long requestingUserId) {
+        FamilyGroup group = familyGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("error.family-group.notfound", groupId));
+
+        if (!group.getOwnerUser().getId().equals(requestingUserId)) {
+            throw new AccessDeniedException("Only the family group owner can delete the group");
+        }
+        if (subscriptionRepository.countByFamilyGroupIdAndStatus(groupId, SubscriptionStatus.ACTIVE) > 0
+                || subscriptionRepository.countByFamilyGroupIdAndStatus(groupId, SubscriptionStatus.FROZEN) > 0) {
+            throw new BusinessRuleViolationException("error.family.group-has-active-members");
+        }
+
+        subscriptionRepository.cancelGroupSubscriptions(groupId);
+        familyGroupRepository.delete(group);
         return subscriptionMapper.toResponse(group);
     }
 

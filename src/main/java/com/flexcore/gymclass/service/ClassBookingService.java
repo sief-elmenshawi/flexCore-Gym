@@ -10,5 +10,7 @@ public interface ClassBookingService {
 
     void cancelBooking(Long bookingId, Long requestingUserId);
 
+    void deletePermanently(Long bookingId, Long requestingUserId);
+
     Page<ClassBookingResponse> getMyBookings(Long userId, Pageable pageable);
 }

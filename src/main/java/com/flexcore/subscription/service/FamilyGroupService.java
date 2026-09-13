@@ -12,5 +12,7 @@ public interface FamilyGroupService {
 
     FamilyGroupResponse addMember(Long groupId, AddFamilyMemberRequest request, Long requestingUserId);
 
+    FamilyGroupResponse deletePermanently(Long groupId, Long requestingUserId);
+
     List<FamilyGroupResponse> getMyGroups(Long ownerUserId);
 }

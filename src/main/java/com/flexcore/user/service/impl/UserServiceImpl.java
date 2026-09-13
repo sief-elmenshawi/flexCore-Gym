@@ -64,6 +64,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getTrainers(Pageable pageable) {
+        return userRepository.findByRole_Name("TRAINER", pageable).map(userMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getMembers(Pageable pageable) {
+        return userRepository.findByRole_Name("MEMBER", pageable).map(userMapper::toResponse);
+    }
+
+    @Override
     @Transactional
     public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
         User user = findUser(userId);

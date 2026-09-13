@@ -73,6 +73,23 @@ public class PTSessionServiceImpl implements PTSessionService {
     }
 
     @Override
+    @Transactional
+    public void deletePermanently(Long sessionId, Long requestingUserId) {
+        PTSession session = ptSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("error.pt-session.notfound", sessionId));
+
+        boolean participant = session.getMember().getId().equals(requestingUserId)
+                || session.getTrainer().getId().equals(requestingUserId);
+        if (!participant) {
+            throw new AccessDeniedException("Only session participants can delete it");
+        }
+        if (session.getStatus() != PTSessionStatus.CANCELLED) {
+            throw new BusinessRuleViolationException("error.pt.delete-permanent-only-cancelled");
+        }
+        ptSessionRepository.delete(session);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<PTSessionResponse> getMySessions(Long userId, String roleName, Pageable pageable) {
         Page<PTSession> page = "TRAINER".equals(roleName)

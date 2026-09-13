@@ -13,7 +13,7 @@ spring:
     fallback-to-system-locale: false
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5434/flexcore}
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5434/flexcore}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     hikari:
@@ -46,7 +46,7 @@ spring:
 
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       lettuce:
         pool:
@@ -59,7 +59,7 @@ spring:
         max-page-size: 100
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
+    host: ${RABBITMQ_HOST:127.0.0.1}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
@@ -103,19 +103,19 @@ management:
     metrics:
       export:
         enabled: false
-        url: http://localhost:14318/v1/metrics
+        url: http://127.0.0.1:14318/v1/metrics
   opentelemetry:
     resource-attributes:
       service.name: flexcore
     tracing:
       export:
         otlp:
-          endpoint: http://localhost:14318/v1/traces
+          endpoint: http://127.0.0.1:14318/v1/traces
     logging:
       export:
         otlp:
           enabled: false          # Jaeger doesn't ingest OTLP logs; keep traceId in console
-          endpoint: http://localhost:14318/v1/logs
+          endpoint: http://127.0.0.1:14318/v1/logs
   endpoints:
     web:
       exposure:

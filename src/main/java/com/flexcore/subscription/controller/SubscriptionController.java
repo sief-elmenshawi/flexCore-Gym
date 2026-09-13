@@ -41,6 +41,7 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
 
     @PostMapping("/purchase")
+    @PreAuthorize("hasAuthority('BOOK_CLASS')")
     @Observed(name = "http.purchaseSubscription", contextualName = "POST /api/v1/subscriptions/purchase")
     @Operation(summary = "Purchase a subscription",
             description = "Members buy for themselves. Staff with RENEW_SUBSCRIPTION may pass userId to buy for others.")
@@ -77,15 +78,45 @@ public class SubscriptionController {
 
     @DeleteMapping("/{id}")
     @Observed(name = "http.cancelSubscription", contextualName = "DELETE /api/v1/subscriptions/{id}")
-    @Operation(summary = "Cancel a subscription")
+    @Operation(summary = "Cancel a subscription (or permanently purge an already-cancelled one)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Subscription cancelled"),
+            @ApiResponse(responseCode = "204", description = "Subscription permanently deleted"),
             @ApiResponse(responseCode = "403", description = "Not your subscription")
     })
     public ResponseEntity<SubscriptionResponse> cancel(@PathVariable Long id) {
         boolean privileged = SecurityUtils.hasAuthority("RENEW_SUBSCRIPTION")
                 || SecurityUtils.hasAuthority("MANAGE_SUBSCRIPTIONS");
         return ResponseEntity.ok(subscriptionService.cancel(id, SecurityUtils.getCurrentUserId(), privileged));
+    }
+
+    @PostMapping("/{id}/reactivate")
+    @Observed(name = "http.reactivateSubscription", contextualName = "POST /api/v1/subscriptions/{id}/reactivate")
+    @Operation(summary = "Reactivate a cancelled subscription")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Subscription reactivated"),
+            @ApiResponse(responseCode = "400", description = "Not cancelled or already active"),
+            @ApiResponse(responseCode = "403", description = "Not your subscription")
+    })
+    public ResponseEntity<SubscriptionResponse> reactivate(@PathVariable Long id) {
+        boolean privileged = SecurityUtils.hasAuthority("RENEW_SUBSCRIPTION")
+                || SecurityUtils.hasAuthority("MANAGE_SUBSCRIPTIONS");
+        return ResponseEntity.ok(subscriptionService.reactivate(id, SecurityUtils.getCurrentUserId(), privileged));
+    }
+
+    @DeleteMapping("/{id}/purge")
+    @Observed(name = "http.purgeSubscription", contextualName = "DELETE /api/v1/subscriptions/{id}/purge")
+    @Operation(summary = "Permanently delete a cancelled or expired subscription")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Subscription permanently deleted"),
+            @ApiResponse(responseCode = "403", description = "Not your subscription"),
+            @ApiResponse(responseCode = "400", description = "Only cancelled or expired subscriptions can be purged")
+    })
+    public ResponseEntity<Void> purge(@PathVariable Long id) {
+        boolean privileged = SecurityUtils.hasAuthority("RENEW_SUBSCRIPTION")
+                || SecurityUtils.hasAuthority("MANAGE_SUBSCRIPTIONS");
+        subscriptionService.deletePermanently(id, SecurityUtils.getCurrentUserId(), privileged);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my")

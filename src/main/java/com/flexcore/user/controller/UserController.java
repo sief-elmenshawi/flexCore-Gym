@@ -69,6 +69,19 @@ public class UserController {
         return ResponseEntity.ok(userService.getAll(pageable));
     }
 
+    @GetMapping("/trainers")
+    @Operation(summary = "List trainers (lightweight)", description = "No admin permission required; any authenticated user can see trainers")
+    public ResponseEntity<Page<UserResponse>> getTrainers(@PageableDefault(size = 50) Pageable pageable) {
+        return ResponseEntity.ok(userService.getTrainers(pageable));
+    }
+
+    @GetMapping("/members")
+    @PreAuthorize("hasAuthority('CHECK_IN_MEMBER')")
+    @Operation(summary = "List members (lightweight)", description = "Requires CHECK_IN_MEMBER (front desk staff)")
+    public ResponseEntity<Page<UserResponse>> getMembers(@PageableDefault(size = 50) Pageable pageable) {
+        return ResponseEntity.ok(userService.getMembers(pageable));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('MANAGE_STAFF')")
     @Operation(summary = "Get a user by id", description = "Requires MANAGE_STAFF permission")

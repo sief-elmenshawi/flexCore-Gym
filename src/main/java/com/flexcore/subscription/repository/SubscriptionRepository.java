@@ -79,4 +79,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
               and s.frozenUntil <= :now
             """)
     int thawElapsedFreezes(@Param("now") LocalDateTime now);
+
+    @Modifying
+    @Query("""
+            UPDATE Subscription s
+            SET s.status = com.flexcore.subscription.enums.SubscriptionStatus.CANCELLED,
+                s.familyGroup = null
+            WHERE s.familyGroup.id = :groupId
+            """)
+    void cancelGroupSubscriptions(@Param("groupId") Long groupId);
 }

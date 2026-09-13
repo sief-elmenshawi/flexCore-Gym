@@ -21,6 +21,10 @@ public interface SubscriptionService {
 
     SubscriptionResponse cancel(Long id, Long currentUserId, boolean privileged);
 
+    SubscriptionResponse reactivate(Long id, Long currentUserId, boolean privileged);
+
+    void deletePermanently(Long id, Long currentUserId, boolean privileged);
+
     List<SubscriptionResponse> getMySubscriptions(Long userId);
 
     Page<SubscriptionResponse> expiringSoon(int withinDays, Pageable pageable);

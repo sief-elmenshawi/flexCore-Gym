@@ -57,6 +57,19 @@ public class ClassBookingController {
         return PagedResponse.ok(classBookingService.getMyBookings(SecurityUtils.getCurrentUserId(), pageable));
     }
 
+    @DeleteMapping("/{id}/purge")
+    @Observed(name = "http.purgeBooking", contextualName = "DELETE /api/v1/bookings/{id}/purge")
+    @Operation(summary = "Permanently delete a cancelled booking")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Booking permanently deleted"),
+            @ApiResponse(responseCode = "403", description = "Not your booking"),
+            @ApiResponse(responseCode = "400", description = "Only cancelled bookings can be purged")
+    })
+    public ResponseEntity<Void> purge(@PathVariable Long id) {
+        classBookingService.deletePermanently(id, SecurityUtils.getCurrentUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     @Observed(name = "http.cancelBooking", contextualName = "DELETE /api/v1/bookings/{id}")
     @Operation(summary = "Cancel a booking and free the seat")
